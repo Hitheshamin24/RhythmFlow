@@ -6,6 +6,7 @@ import StudentsPage from "./pages/StudentsPage";
 import AttendancePage from "./pages/AttendancePage";
 import PaymentsPage from "./pages/PaymentsPage";
 import FinancePage from "./pages/FinancePage";
+import BatchesPage from "./pages/BatchesPage"
 const RequireAuth = ({ children }) => {
   const token = localStorage.getItem("token");
   const location = useLocation();
@@ -29,6 +30,8 @@ const App = () => {
                 <Route path="attendance" element={<AttendancePage/>}/>
                 <Route path="payments" element={<PaymentsPage/>}/>
                 <Route path="finances" element={<FinancePage/>}/>
+                <Route path="batches" element={<BatchesPage />} />
+
                 <Route path="*"element={<Navigate to="/" replace/>}/>
               </Routes>
             </DashBoardLayout>

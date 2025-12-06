@@ -1,6 +1,6 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { Menu, X, ChevronLeft, ChevronRight, LogOut, Home, Users, Calendar, CreditCard, TrendingUp, Settings } from "lucide-react";
+import { Menu, X,Layers, ChevronLeft, ChevronRight, LogOut, Home, Users, Calendar, CreditCard, TrendingUp, Settings } from "lucide-react";
 import image from "../assets/danceapp.png"
 
 // Note: I swapped emojis for Lucide-React icons for a more professional responsive look. 
@@ -8,6 +8,7 @@ import image from "../assets/danceapp.png"
 const navItems = [
   { label: "Dashboard", path: "/dashboard", icon: <Home size={20} /> },
   { label: "Students", path: "/dashboard/students", icon: <Users size={20} /> },
+  { label: "Batches", path: "/dashboard/batches", icon: <Layers size={20} /> },
   { label: "Attendance", path: "/dashboard/attendance", icon: <Calendar size={20} /> },
   { label: "Payments", path: "/dashboard/payments", icon: <CreditCard size={20} /> },
   { label: "Finances", path: "/dashboard/finances", icon: <TrendingUp size={20} /> },

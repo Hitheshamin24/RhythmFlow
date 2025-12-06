@@ -19,6 +19,7 @@ app.use("/api/students",require("./routes/studentRoutes"))
 app.use("/api/attendance",require("./routes/attendenceRoutes"))
 app.use("/api/payments", require("./routes/paymentRoutes"));
 app.use("/api/finance", require("./routes/financeRoutes"));
+app.use("/api/batches", require("./routes/batchRoutes"));
 
 const PORT=process.env.PORT||5000
 app.listen(PORT,()=>{

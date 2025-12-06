@@ -39,6 +39,10 @@ const studentSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    batch: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Batch",
+    },
   },
   { timestamps: true }
 );
