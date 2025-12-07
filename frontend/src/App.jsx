@@ -7,6 +7,7 @@ import AttendancePage from "./pages/AttendancePage";
 import PaymentsPage from "./pages/PaymentsPage";
 import FinancePage from "./pages/FinancePage";
 import BatchesPage from "./pages/BatchesPage"
+import SettingsPage from "./pages/SettingPage";
 const RequireAuth = ({ children }) => {
   const token = localStorage.getItem("token");
   const location = useLocation();
@@ -31,6 +32,7 @@ const App = () => {
                 <Route path="payments" element={<PaymentsPage/>}/>
                 <Route path="finances" element={<FinancePage/>}/>
                 <Route path="batches" element={<BatchesPage />} />
+                <Route path="settings" element={<SettingsPage/>}/>
 
                 <Route path="*"element={<Navigate to="/" replace/>}/>
               </Routes>

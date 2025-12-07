@@ -1,11 +1,7 @@
-import client from "./client"
+import client from "./client";
 
-export const login=async(className,password)=>{
-    const res=await client.post("/auth/login",{className,password})
-    return res.data
-}
+export const login = (className, password) =>
+  client.post("/auth/login", { className, password });
 
-export const registerStudio=async(className,email,password)=>{
-    const res=await client.post("/auth/register",{className,email,password})
-    return res.data;
-}
+export const registerStudio = (className, email, password, phone) =>
+  client.post("/auth/register", { className, email, password, phone });

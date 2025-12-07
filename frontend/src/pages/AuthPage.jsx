@@ -1,16 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { login, registerStudio } from "../api/auth"; // Assuming these exist
-import {
-  User,
-  Mail,
-  Lock,
-  Loader2,
-  ArrowRight,
-  Eye,
-  EyeOff,
-} from "lucide-react";
+import { User, Mail, Lock, Loader2, ArrowRight, X } from "lucide-react";
 import image from "../assets/danceapp.png";
+
 const AuthPage = () => {
   const [mode, setMode] = useState("login"); // "login" | "register"
   const [className, setClassName] = useState("");
@@ -18,25 +11,36 @@ const AuthPage = () => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [show, setShow] = useState(false);
-
+  const [phone, setPhone] = useState("");
   const [error, setError] = useState("");
-  const navigate = useNavigate();
+  // Forgot password state
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [fpClassName, setFpClassName] = useState("");
+  const [fpEmail, setFpEmail] = useState("");
+  const [fpLoading, setFpLoading] = useState(false);
+  const [fpMessage, setFpMessage] = useState("");
 
+  const navigate = useNavigate();
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
     try {
-      let data;
+      let response;
+
       if (mode === "login") {
-        data = await login(className, password);
+        response = await login(className, password);
       } else {
-        data = await registerStudio(className, email, password);
+        response = await registerStudio(className, email, password, phone);
       }
+
+      // ✅ IMPORTANT FIX
+      const data = response.data;
 
       localStorage.setItem("token", data.token);
       localStorage.setItem("studioName", data.studio.className);
+
       navigate("/dashboard");
     } catch (err) {
       const msg =
@@ -46,6 +50,36 @@ const AuthPage = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Forgot password submit (stub for now)
+  const handleForgotSubmit = async (e) => {
+    e.preventDefault();
+    setFpMessage("");
+    setFpLoading(true);
+
+    try {
+      // 🔐 Here in future you can call:
+      // await requestPasswordReset({ className: fpClassName, email: fpEmail });
+      // For now, just show info message
+      setFpMessage(
+        "Password reset feature is not configured yet. Please contact the app admin / support to reset your password."
+      );
+    } catch (err) {
+      setFpMessage(
+        err.response?.data?.message || "Failed to send reset request."
+      );
+    } finally {
+      setFpLoading(false);
+    }
+  };
+
+  // When user opens forgot modal, pre-fill fields from login form
+  const openForgotModal = () => {
+    setFpClassName(className || "");
+    setFpEmail(email || "");
+    setFpMessage("");
+    setShowForgotModal(true);
   };
 
   return (
@@ -117,6 +151,30 @@ const AuthPage = () => {
               />
             </div>
           </div>
+          {/* Phone Input (Register Only) */}
+          <div
+            className={`space-y-1.5 overflow-hidden transition-all duration-300 ease-in-out ${
+              mode === "register" ? "max-h-24 opacity-100" : "max-h-0 opacity-0"
+            }`}
+          >
+            <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide ml-1">
+              Phone Number
+            </label>
+            <div className="relative group">
+              <Mail
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-rose-500 transition-colors"
+                size={18}
+              />
+              <input
+                type="tel"
+                className="w-full bg-slate-50 rounded-xl border border-slate-200 pl-10 pr-4 py-3 text-sm outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all placeholder:text-slate-400 text-slate-800"
+                placeholder="9876543210"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                required={mode === "register"}
+              />
+            </div>
+          </div>
 
           {/* Email Input (Register Only) */}
           <div
@@ -138,47 +196,55 @@ const AuthPage = () => {
                 placeholder="owner@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                required={mode === "register"} // Only required if registering
+                required={mode === "register"}
               />
             </div>
           </div>
 
           {/* Password Input */}
           <div className="space-y-1.5">
-            {/* Password Input */}
-<div className="space-y-1.5">
-  <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide ml-1">
-    Password
-  </label>
+            <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide ml-1">
+              Password
+            </label>
 
-  <div className="relative group">
+            <div className="relative group">
+              {/* Lock icon as toggle */}
+              <button
+                type="button"
+                onClick={() => setShow(!show)}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-rose-600 transition-colors"
+              >
+                <Lock size={18} />
+              </button>
 
-    {/* Lock icon as toggle */}
-    <button
-      type="button"
-      onClick={() => setShow(!show)}
-      className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-rose-600 transition-colors"
-    >
-      <Lock size={18} />
-    </button>
-
-    {/* Password input */}
-    <input
-      type={show ? "text" : "password"}
-      className="w-full bg-slate-50 rounded-xl border border-slate-200 pl-10 pr-4 py-3 text-sm outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all placeholder:text-slate-400 text-slate-800"
-      placeholder="••••••••"
-      value={password}
-      onChange={(e) => setPassword(e.target.value)}
-      required
-    />
-  </div>
-</div>
-
+              {/* Password input */}
+              <input
+                type={show ? "text" : "password"}
+                className="w-full bg-slate-50 rounded-xl border border-slate-200 pl-10 pr-4 py-3 text-sm outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all placeholder:text-slate-400 text-slate-800"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
           </div>
+
+          {/* Forgot password link (Login mode only) */}
+          {mode === "login" && (
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={openForgotModal}
+                className="text-xs font-semibold text-rose-600 hover:text-rose-700 underline underline-offset-4"
+              >
+                Forgot password?
+              </button>
+            </div>
+          )}
 
           {/* Error Message */}
           {error && (
-            <div className="flex items-start gap-2 text-sm text-rose-600 bg-rose-50 border border-rose-100 rounded-lg p-3 animate-pulse">
+            <div className="flex items-start gap-2 text-sm text-rose-600 bg-rose-50 border border-rose-100 rounded-lg p-3">
               <span>⚠️</span>
               <p>{error}</p>
             </div>
@@ -209,6 +275,85 @@ const AuthPage = () => {
       <div className="absolute bottom-6 text-white/20 text-xs">
         © 2025 DanceFlow. All rights reserved.
       </div>
+
+      {/* FORGOT PASSWORD MODAL */}
+      {showForgotModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl border border-white/20 p-6 relative">
+            <button
+              onClick={() => setShowForgotModal(false)}
+              className="absolute right-4 top-4 text-slate-400 hover:text-slate-700"
+            >
+              <X size={18} />
+            </button>
+
+            <h3 className="text-lg font-bold text-slate-900 mb-2">
+              Forgot Password
+            </h3>
+            <p className="text-xs text-slate-500 mb-4">
+              Enter your dance class name and registered email. This will be
+              used to verify your account when reset is implemented.
+            </p>
+
+            <form onSubmit={handleForgotSubmit} className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-1">
+                  Dance Class Name
+                </label>
+                <input
+                  value={fpClassName}
+                  onChange={(e) => setFpClassName(e.target.value)}
+                  required
+                  className="w-full border rounded-xl px-3 py-2 text-sm bg-slate-50 focus:ring-2 focus:ring-rose-100 focus:border-rose-400 outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-1">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  value={fpEmail}
+                  onChange={(e) => setFpEmail(e.target.value)}
+                  required
+                  className="w-full border rounded-xl px-3 py-2 text-sm bg-slate-50 focus:ring-2 focus:ring-rose-100 focus:border-rose-400 outline-none"
+                />
+              </div>
+
+              {fpMessage && (
+                <div className="text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+                  {fpMessage}
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowForgotModal(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-semibold hover:bg-slate-200"
+                >
+                  Close
+                </button>
+                <button
+                  type="submit"
+                  disabled={fpLoading}
+                  className="px-4 py-2 rounded-xl bg-rose-600 text-white text-xs font-semibold hover:bg-rose-700 disabled:opacity-60 flex items-center gap-2"
+                >
+                  {fpLoading ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    "Submit"
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

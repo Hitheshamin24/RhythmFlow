@@ -1,36 +1,58 @@
 const express = require("express");
 const Student = require("../models/Student");
+const Batch = require("../models/Batch");
 const protect = require("../middleware/authMiddleware");
 
 const router = express.Router();
-
 router.use(protect);
 
-// POST/api.Students
-// create new student for this studio
-// body:{ ame,parentName,phone,email,monthlyFee}
-
+// POST /api/students
+// body: { name, parentName, phone, email, monthlyFee, batch }
 router.post("/", async (req, res) => {
   try {
-    const { name, parentName, phone, email, monthlyFee } = req.body;
+    const { name, parentName, phone, email, monthlyFee, batch } = req.body;
 
     if (!name) {
       return res.status(400).json({ message: "Student name is required" });
     }
-    const student = await Student.create({
+
+    // 1️⃣ Build base data
+    const studentData = {
       studio: req.studioId,
       name,
       parentName,
       phone,
       email,
       monthlyFee: monthlyFee || 0,
-    });
+    };
+
+    // 2️⃣ If batch is provided, validate and attach
+    if (batch) {
+      const batchDoc = await Batch.findOne({
+        _id: batch,
+        studio: req.studioId,
+      });
+
+      if (!batchDoc) {
+        return res
+          .status(400)
+          .json({ message: "Invalid batch for this studio" });
+      }
+
+      studentData.batch = batch;
+    }
+
+    // 3️⃣ Create once with batch included
+    const student = await Student.create(studentData);
+
     res.status(201).json(student);
   } catch (e) {
     console.error("Create student error", e);
     res.status(500).json({ message: "Server error" });
   }
 });
+
+
 
 // get /api students
 // get all students for this studio
@@ -94,7 +116,6 @@ router.put("/:id", async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
-
 
 // DELETE /api/students/:id
 // delete student

@@ -11,6 +11,12 @@ const studioSchema = new mongoose.Schema(
     email: {
       type: String,
       trim: true,
+      default: "",
+    },
+    phone: {
+      type: String,
+      trim: true,
+      default: "", // 👈 NEW
     },
     password: {
       type: String,
@@ -19,4 +25,5 @@ const studioSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
 module.exports = mongoose.model("Studio", studioSchema);

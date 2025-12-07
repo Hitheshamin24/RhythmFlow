@@ -5,6 +5,7 @@ import {
   markUnpaid,
   resetAllToUnpaid,
 } from "../api/payments";
+import client from "../api/client"; // 🔹 NEW: to fetch batches
 import {
   CreditCard,
   RefreshCw,
@@ -39,48 +40,52 @@ const PaymentsPage = () => {
   const [resetting, setResetting] = useState(false);
   const [toggleConfirm, setToggleConfirm] = useState(false);
 
+  // 🔹 Batches + selected batch filter
+  const [batches, setBatches] = useState([]);
+  const [selectedBatchId, setSelectedBatchId] = useState(""); // "" = all batches
+
   // helper to test match on name or phone
   const matchesQuery = (s, q) => {
-    const query = String(q || "")
-      .toLowerCase()
-      .trim();
+    const query = String(q || "").toLowerCase().trim();
     if (!query) return true;
     const name = String(s.name || "").toLowerCase();
     const phone = String(s.phone || "").toLowerCase();
     return name.includes(query) || phone.includes(query);
   };
 
+  // helper: match selected batch
+  const matchesBatch = (s) => {
+    if (!selectedBatchId) return true; // "All batches"
+    return String(s.batch || "") === String(selectedBatchId);
+  };
+
   const sortByNameAsc = (a, b) => {
-    const nameA = String(a.name || "")
-      .toLowerCase()
-      .trim();
-    const nameB = String(b.name || "")
-      .toLowerCase()
-      .trim();
+    const nameA = String(a.name || "").toLowerCase().trim();
+    const nameB = String(b.name || "").toLowerCase().trim();
     return nameA.localeCompare(nameB);
   };
 
   const filteredUnpaid = useMemo(
     () =>
       payments.unpaid
-        .filter((s) => matchesQuery(s, debouncedQuery))
+        .filter((s) => matchesQuery(s, debouncedQuery) && matchesBatch(s))
         .sort(sortByNameAsc),
-    [payments.unpaid, debouncedQuery]
+    [payments.unpaid, debouncedQuery, selectedBatchId]
   );
 
   const filteredPaid = useMemo(
     () =>
       payments.paid
-        .filter((s) => matchesQuery(s, debouncedQuery))
+        .filter((s) => matchesQuery(s, debouncedQuery) && matchesBatch(s))
         .sort(sortByNameAsc),
-    [payments.paid, debouncedQuery]
+    [payments.paid, debouncedQuery, selectedBatchId]
   );
 
   const load = async () => {
     try {
       setLoading(true);
       setError("");
-      const res = await getPayments();
+      const res = await getPayments(); // 🔹 stays same: studio-wide payments
       setPayments(res.data);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to load payments.");
@@ -89,8 +94,18 @@ const PaymentsPage = () => {
     }
   };
 
+  const loadBatches = async () => {
+    try {
+      const res = await client.get("/batches");
+      setBatches(res.data || []);
+    } catch (err) {
+      console.error("Failed to load batches", err);
+    }
+  };
+
   useEffect(() => {
     load();
+    loadBatches();
   }, []);
 
   useEffect(() => {
@@ -143,7 +158,7 @@ const PaymentsPage = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col md:flex-row gap-3 md:items-center">
           {/* Search box */}
           <div className="relative">
             <input
@@ -157,6 +172,20 @@ const PaymentsPage = () => {
               <Search size={16} />
             </div>
           </div>
+
+          {/* 🔹 Batch filter dropdown */}
+          <select
+            value={selectedBatchId}
+            onChange={(e) => setSelectedBatchId(e.target.value)}
+            className="px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs md:text-sm min-w-[180px] focus:outline-none focus:ring-2 focus:ring-rose-200"
+          >
+            <option value="">All batches</option>
+            {batches.map((b) => (
+              <option key={b._id} value={b._id}>
+                {b.name} {b.timing ? `(${b.timing})` : ""}
+              </option>
+            ))}
+          </select>
 
           <button
             onClick={() => setShowResetModal(true)}
