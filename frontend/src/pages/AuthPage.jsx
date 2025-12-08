@@ -1,6 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { login, registerStudio } from "../api/auth"; // Assuming these exist
+import {
+  login,
+  registerStudio,
+  requestPasswordOtp,
+  resetPasswordWithOtp,
+} from "../api/auth"; // Assuming these exist
 import { User, Mail, Lock, Loader2, ArrowRight, X } from "lucide-react";
 import image from "../assets/danceapp.png";
 
@@ -15,10 +20,18 @@ const AuthPage = () => {
   const [error, setError] = useState("");
   // Forgot password state
   const [showForgotModal, setShowForgotModal] = useState(false);
+  const [fpStep, setFpStep] = useState("request"); // "request" | "verify"
+
   const [fpClassName, setFpClassName] = useState("");
   const [fpEmail, setFpEmail] = useState("");
+  const [fpPhone, setFpPhone] = useState("");
+  const [fpOtp, setFpOtp] = useState("");
+  const [fpNewPassword, setFpNewPassword] = useState("");
+  const [fpConfirmPassword, setFpConfirmPassword] = useState("");
+
   const [fpLoading, setFpLoading] = useState(false);
   const [fpMessage, setFpMessage] = useState("");
+  const [fpError, setFpError] = useState("");
 
   const navigate = useNavigate();
   const handleSubmit = async (e) => {
@@ -52,22 +65,59 @@ const AuthPage = () => {
     }
   };
 
-  // Forgot password submit (stub for now)
   const handleForgotSubmit = async (e) => {
     e.preventDefault();
     setFpMessage("");
+    setFpError("");
     setFpLoading(true);
 
     try {
-      // 🔐 Here in future you can call:
-      // await requestPasswordReset({ className: fpClassName, email: fpEmail });
-      // For now, just show info message
-      setFpMessage(
-        "Password reset feature is not configured yet. Please contact the app admin / support to reset your password."
-      );
+      if (fpStep === "request") {
+        // Need at least one identifier
+        if (!fpClassName && !fpEmail && !fpPhone) {
+          setFpError("Enter class name OR email OR phone.");
+          return;
+        }
+
+        const res = await requestPasswordOtp({
+          className: fpClassName,
+          email: fpEmail,
+          phone: fpPhone,
+        });
+
+        setFpMessage(
+          res.data?.message ||
+            "If an account exists, OTP has been sent to registered email & phone."
+        );
+        setFpStep("verify");
+      } else {
+        // verify + reset
+        if (fpNewPassword !== fpConfirmPassword) {
+          setFpError("New password and confirm password do not match.");
+          return;
+        }
+        if (!fpNewPassword || fpNewPassword.length < 6) {
+          setFpError("Password should be at least 6 characters.");
+          return;
+        }
+
+        const res = await resetPasswordWithOtp({
+          className: fpClassName,
+          email: fpEmail,
+          phone: fpPhone,
+          otp: fpOtp,
+          newPassword: fpNewPassword,
+        });
+
+        setFpMessage(res.data?.message || "Password reset successful.");
+        // close after short delay
+        setTimeout(() => {
+          setShowForgotModal(false);
+        }, 1500);
+      }
     } catch (err) {
-      setFpMessage(
-        err.response?.data?.message || "Failed to send reset request."
+      setFpError(
+        err.response?.data?.message || "Failed to process reset request."
       );
     } finally {
       setFpLoading(false);
@@ -78,7 +128,13 @@ const AuthPage = () => {
   const openForgotModal = () => {
     setFpClassName(className || "");
     setFpEmail(email || "");
+    setFpPhone(phone || "");
+    setFpOtp("");
+    setFpNewPassword("");
+    setFpConfirmPassword("");
     setFpMessage("");
+    setFpError("");
+    setFpStep("request");
     setShowForgotModal(true);
   };
 
@@ -296,33 +352,104 @@ const AuthPage = () => {
             </p>
 
             <form onSubmit={handleForgotSubmit} className="space-y-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1">
-                  Dance Class Name
-                </label>
-                <input
-                  value={fpClassName}
-                  onChange={(e) => setFpClassName(e.target.value)}
-                  required
-                  className="w-full border rounded-xl px-3 py-2 text-sm bg-slate-50 focus:ring-2 focus:ring-rose-100 focus:border-rose-400 outline-none"
-                />
-              </div>
+              {fpStep === "request" && (
+                <>
+                  <p className="text-[11px] text-slate-500 mb-1">
+                    Enter <b>any one</b>: class name, email or phone. We’ll send
+                    OTP to the registered email & mobile of that studio.
+                  </p>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  value={fpEmail}
-                  onChange={(e) => setFpEmail(e.target.value)}
-                  required
-                  className="w-full border rounded-xl px-3 py-2 text-sm bg-slate-50 focus:ring-2 focus:ring-rose-100 focus:border-rose-400 outline-none"
-                />
-              </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 mb-1">
+                      Dance Class Name
+                    </label>
+                    <input
+                      value={fpClassName}
+                      onChange={(e) => setFpClassName(e.target.value)}
+                      className="w-full border rounded-xl px-3 py-2 text-sm bg-slate-50 focus:ring-2 focus:ring-rose-100 focus:border-rose-400 outline-none"
+                    />
+                  </div>
 
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 mb-1">
+                      Email
+                    </label>
+                    <input
+                      type="email"
+                      value={fpEmail}
+                      onChange={(e) => setFpEmail(e.target.value)}
+                      className="w-full border rounded-xl px-3 py-2 text-sm bg-slate-50 focus:ring-2 focus:ring-rose-100 focus:border-rose-400 outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 mb-1">
+                      Phone
+                    </label>
+                    <input
+                      type="tel"
+                      value={fpPhone}
+                      onChange={(e) => setFpPhone(e.target.value)}
+                      className="w-full border rounded-xl px-3 py-2 text-sm bg-slate-50 focus:ring-2 focus:ring-rose-100 focus:border-rose-400 outline-none"
+                    />
+                  </div>
+                </>
+              )}
+
+              {fpStep === "verify" && (
+                <>
+                  <p className="text-[11px] text-slate-500 mb-1">
+                    Enter the OTP sent to your registered email / phone, and
+                    choose a new password.
+                  </p>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 mb-1">
+                      OTP
+                    </label>
+                    <input
+                      value={fpOtp}
+                      onChange={(e) => setFpOtp(e.target.value)}
+                      required
+                      className="w-full border rounded-xl px-3 py-2 text-sm bg-slate-50 focus:ring-2 focus:ring-rose-100 focus:border-rose-400 outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 mb-1">
+                      New Password
+                    </label>
+                    <input
+                      type="password"
+                      value={fpNewPassword}
+                      onChange={(e) => setFpNewPassword(e.target.value)}
+                      required
+                      className="w-full border rounded-xl px-3 py-2 text-sm bg-slate-50 focus:ring-2 focus:ring-rose-100 focus:border-rose-400 outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 mb-1">
+                      Confirm Password
+                    </label>
+                    <input
+                      type="password"
+                      value={fpConfirmPassword}
+                      onChange={(e) => setFpConfirmPassword(e.target.value)}
+                      required
+                      className="w-full border rounded-xl px-3 py-2 text-sm bg-slate-50 focus:ring-2 focus:ring-rose-100 focus:border-rose-400 outline-none"
+                    />
+                  </div>
+                </>
+              )}
+
+              {fpError && (
+                <div className="text-xs text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">
+                  {fpError}
+                </div>
+              )}
               {fpMessage && (
-                <div className="text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+                <div className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2">
                   {fpMessage}
                 </div>
               )}
@@ -343,10 +470,12 @@ const AuthPage = () => {
                   {fpLoading ? (
                     <>
                       <Loader2 size={14} className="animate-spin" />
-                      Sending...
+                      {fpStep === "request" ? "Sending..." : "Updating..."}
                     </>
+                  ) : fpStep === "request" ? (
+                    "Send OTP"
                   ) : (
-                    "Submit"
+                    "Reset Password"
                   )}
                 </button>
               </div>

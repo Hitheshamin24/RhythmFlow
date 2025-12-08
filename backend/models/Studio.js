@@ -16,11 +16,17 @@ const studioSchema = new mongoose.Schema(
     phone: {
       type: String,
       trim: true,
-      default: "", // 👈 NEW
+      default: "", 
     },
     password: {
       type: String,
       required: true,
+    },
+    resetOtp: {
+      type: String,
+    },
+    resetOtpExpires: {
+      type: Date,
     },
   },
   { timestamps: true }
