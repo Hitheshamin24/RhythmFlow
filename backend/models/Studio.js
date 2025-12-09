@@ -8,24 +8,44 @@ const studioSchema = new mongoose.Schema(
       unique: true,
       trim: true,
     },
+
     email: {
       type: String,
+      required: true,   // ✅ NOW REQUIRED
+      unique: true,     // ✅ NOW UNIQUE
       trim: true,
-      default: "",
+      lowercase: true, // ✅ prevents duplicate case issues
     },
+
     phone: {
       type: String,
+      required: true,   // ✅ NOW REQUIRED
+      unique: true,     // ✅ NOW UNIQUE
       trim: true,
-      default: "", 
     },
+
     password: {
       type: String,
       required: true,
     },
+
+    // 🔹 Forgot password flow
     resetOtp: {
       type: String,
     },
     resetOtpExpires: {
+      type: Date,
+    },
+
+    // 🔹 Email verification flow
+    emailVerified: {
+      type: Boolean,
+      default: false,
+    },
+    emailVerificationOtp: {
+      type: String,
+    },
+    emailVerificationOtpExpires: {
       type: Date,
     },
   },

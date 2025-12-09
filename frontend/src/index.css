@@ -59,3 +59,21 @@
   border-color: #fb7185 !important; /* rose-400 */
   border-width: 2px 2px 0 0 !important;
 }
+/* ✅ Grey out disabled attendance days */
+.react-datepicker__day--disabled {
+  color: #9ca3af !important;      /* Tailwind gray-400 */
+  background-color: #f1f5f9 !important; /* light slate */
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+/* ✅ Make allowed days look normal */
+.react-datepicker__day {
+  transition: background-color 0.15s ease;
+}
+
+/* ✅ Hover effect only for allowed days */
+.react-datepicker__day:not(.react-datepicker__day--disabled):hover {
+  background-color: #ffe4e6 !important; /* rose-100 */
+  color: #be123c !important;           /* rose-700 */
+}

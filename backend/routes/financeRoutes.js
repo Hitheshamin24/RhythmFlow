@@ -45,23 +45,20 @@ router.get("/summary", async (req, res) => {
 });
 
 // ADD expense
+// POST /api/finance/expense
 router.post("/expense", async (req, res) => {
-  try {
-    const { title, amount, category } = req.body;
+  const { title, amount, category } = req.body;
 
-    const item = await Expense.create({
-      studio: req.studioId,
-      title,
-      amount,
-      category,
-    });
+  const item = await Expense.create({
+    studio: req.studioId,
+    title,
+    amount,
+    category,
+  });
 
-    res.status(201).json(item);
-  } catch (err) {
-    console.error("Expense add error:", err);
-    res.status(500).json({ message: "Server error" });
-  }
+  res.status(201).json(item);
 });
+
 
 // DELETE expense
 router.delete("/expense/:id", async (req, res) => {

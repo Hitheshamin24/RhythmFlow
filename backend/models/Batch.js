@@ -19,7 +19,7 @@ const batchSchema = new mongoose.Schema(
       required: true,
       lowercase: true,
       trim: true,
-      set: v => v.trim().toLowerCase(), // auto-normalize here
+      set: (v) => v.trim().toLowerCase(), // auto-normalize
     },
 
     timing: {
@@ -27,11 +27,18 @@ const batchSchema = new mongoose.Schema(
       default: "",
       trim: true,
     },
+
+    // ✅ NEW: Days field
+    days: {
+      type: [String],
+      enum: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+      required: true,
+    },
   },
   { timestamps: true }
 );
 
-// Unique constraint
+// ✅ Unique constraint (studio + batch name)
 batchSchema.index({ studio: 1, normalizedName: 1 }, { unique: true });
 
 module.exports = mongoose.model("Batch", batchSchema);

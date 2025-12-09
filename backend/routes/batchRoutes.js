@@ -5,35 +5,50 @@ const Batch = require("../models/Batch");
 const router = express.Router();
 router.use(protect);
 
-/**
- * CREATE BATCH
- * POST /api/batches
- * body: { name, timing }
- */
+const ALLOWED_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+// CREATE BATCH
+// POST /api/batches
+// body: { name, timing, days: ["Mon","Wed","Fri"] }
 router.post("/", async (req, res) => {
   try {
-    const { name, timing } = req.body;
+    const { name, timing, days } = req.body;
 
     if (!name || !name.trim()) {
       return res.status(400).json({ message: "Batch name is required" });
     }
 
-    const normalized = name.trim().toLowerCase();
+    // ✅ validate days
+    if (!Array.isArray(days) || days.length === 0) {
+      return res
+        .status(400)
+        .json({ message: "At least one day is required" });
+    }
 
-    const exists = await Batch.findOne({
-      studio: req.studioId,
-      normalizedName: normalized,
-    });
+    const invalid = days.filter((d) => !ALLOWED_DAYS.includes(d));
+    if (invalid.length > 0) {
+      return res.status(400).json({
+        message: `Invalid days: ${invalid.join(
+          ", "
+        )}. Allowed: ${ALLOWED_DAYS.join(", ")}`,
+      });
+    }
 
+    const normalizedName = name.trim().toLowerCase();
+
+    // check duplicate name within same studio
+    const exists = await Batch.findOne({ studio: req.studioId, normalizedName });
     if (exists) {
-      return res.status(400).json({ message: "Batch name already exists for this studio" });
+      return res
+        .status(400)
+        .json({ message: "Batch name already exists for this studio" });
     }
 
     const batch = await Batch.create({
       studio: req.studioId,
-      name,
-      normalizedName: normalized, // setter will format automatically
+      name: name.trim(),
+      normalizedName,
       timing: timing || "",
+      days, // ✅ save days
     });
 
     res.status(201).json(batch);
@@ -42,7 +57,6 @@ router.post("/", async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
-
 
 
 /**
@@ -61,12 +75,10 @@ router.get("/", async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
-
-/**
- * UPDATE BATCH
- * PUT /api/batches/:id
- * body: { name, timing }
- */router.put("/:id", async (req, res) => {
+// UPDATE BATCH
+// PUT /api/batches/:id
+// body: { name?, timing?, days? }
+router.put("/:id", async (req, res) => {
   try {
     const batch = await Batch.findOne({
       _id: req.params.id,
@@ -77,35 +89,50 @@ router.get("/", async (req, res) => {
       return res.status(404).json({ message: "Batch not found" });
     }
 
-    const { name, timing } = req.body;
+    const { name, timing, days } = req.body;
 
-    // If user is updating name -> check duplicate
-    if (name && name.trim()) {
-      const normalized = name.trim().toLowerCase();
+    // if name is changed, also update normalizedName and check duplicate
+    if (name && name.trim() && name.trim() !== batch.name) {
+      const normalizedName = name.trim().toLowerCase();
 
       const exists = await Batch.findOne({
         studio: req.studioId,
-        normalizedName: normalized,
-        _id: { $ne: batch._id }, // ignore same batch
+        normalizedName,
+        _id: { $ne: batch._id },
       });
-
       if (exists) {
         return res
           .status(400)
-          .json({ message: "Another batch already has this name" });
+          .json({ message: "Another batch already uses this name" });
       }
 
       batch.name = name.trim();
-      batch.normalizedName = normalized; // auto update
+      batch.normalizedName = normalizedName;
     }
 
-    // Update timing if provided
-    if (timing !== undefined) {
+    if (typeof timing !== "undefined") {
       batch.timing = timing;
     }
 
-    await batch.save();
+    // ✅ update days if sent
+    if (typeof days !== "undefined") {
+      if (!Array.isArray(days) || days.length === 0) {
+        return res
+          .status(400)
+          .json({ message: "At least one day is required" });
+      }
+      const invalid = days.filter((d) => !ALLOWED_DAYS.includes(d));
+      if (invalid.length > 0) {
+        return res.status(400).json({
+          message: `Invalid days: ${invalid.join(
+            ", "
+          )}. Allowed: ${ALLOWED_DAYS.join(", ")}`,
+        });
+      }
+      batch.days = days;
+    }
 
+    await batch.save();
     res.json(batch);
   } catch (err) {
     console.error("Update batch error:", err);

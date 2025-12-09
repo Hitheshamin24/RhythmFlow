@@ -13,9 +13,19 @@ import {
   XCircle,
   Layers,
   ChevronDown,
-  AlertCircle
+  AlertCircle,
 } from "lucide-react";
 
+// Map your schema days → JS Date.getDay() index
+const DAY_TO_INDEX = {
+  sun: 0,
+  mon: 1,
+  tue: 2,
+  wed: 3,
+  thu: 4,
+  fri: 5,
+  sat: 6,
+};
 // Helper: Format Date Object -> YYYY-MM-DD string for Backend
 const formatDateForBackend = (date) => {
   return date.toISOString().slice(0, 10);
@@ -35,26 +45,46 @@ const AttendancePage = () => {
   // Batches
   const [batches, setBatches] = useState([]);
   const [selectedBatchId, setSelectedBatchId] = useState("");
+  // ✅ Selected batch object
+  const selectedBatch = batches.find((b) => b._id === selectedBatchId);
+
+  // ✅ Allow only class days in calendar
+  const isDateAllowed = (date) => {
+    if (
+      !selectedBatch ||
+      !selectedBatch.days ||
+      selectedBatch.days.length === 0
+    ) {
+      return false; // no batch → no dates allowed
+    }
+
+    const allowedIndexes = selectedBatch.days
+      .map((d) => DAY_TO_INDEX[d.toLowerCase()])
+      .filter((d) => d !== undefined);
+
+    const dow = date.getDay(); // 0 (Sun) → 6 (Sat)
+
+    return allowedIndexes.includes(dow);
+  };
 
   // Load Students
- const loadStudents = async () => {
-  try {
-    setLoadingStudents(true);
-    const res = await client.get("/students");
+  const loadStudents = async () => {
+    try {
+      setLoadingStudents(true);
+      const res = await client.get("/students");
 
-    // ✅ Only ACTIVE students + ✅ SORT ascending by name
-    const activeStudents = (res.data || [])
-      .filter((s) => s.isActive)
-      .sort((a, b) => a.name.localeCompare(b.name));
+      // ✅ Only ACTIVE students + ✅ SORT ascending by name
+      const activeStudents = (res.data || [])
+        .filter((s) => s.isActive)
+        .sort((a, b) => a.name.localeCompare(b.name));
 
-    setStudents(activeStudents);
-  } catch (err) {
-    setError(err.response?.data?.message || "Failed to load students.");
-  } finally {
-    setLoadingStudents(false);
-  }
-};
-
+      setStudents(activeStudents);
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to load students.");
+    } finally {
+      setLoadingStudents(false);
+    }
+  };
 
   // Load Batches
   const loadBatches = async () => {
@@ -97,9 +127,7 @@ const AttendancePage = () => {
         // Normal case: calculate absentees based on who is NOT in the present list
         const presentSet = new Set(present.map((s) => s._id));
         const newAbsentIds = new Set(
-          batchStudents
-            .filter((s) => !presentSet.has(s._id))
-            .map((s) => s._id)
+          batchStudents.filter((s) => !presentSet.has(s._id)).map((s) => s._id)
         );
 
         setAbsentIds(newAbsentIds);
@@ -128,6 +156,21 @@ const AttendancePage = () => {
     }
     // eslint-disable-next-line
   }, [selectedDate, students.length, selectedBatchId]);
+  useEffect(() => {
+    if (!selectedBatch) return;
+
+    if (!isDateAllowed(selectedDate)) {
+      let d = new Date();
+      for (let i = 0; i < 7; i++) {
+        if (isDateAllowed(d)) {
+          setSelectedDate(new Date(d));
+          break;
+        }
+        d.setDate(d.getDate() + 1);
+      }
+    }
+    // eslint-disable-next-line
+  }, [selectedBatchId, batches.length]);
 
   // Toggle ABSENT for a student
   const toggleAbsent = (id) => {
@@ -162,9 +205,7 @@ const AttendancePage = () => {
       setInfo("");
 
       // Logic: Convert "Absent IDs" back to "Present IDs" for backend
-      const batchStudents = students.filter(
-        (s) => s.batch === selectedBatchId
-      );
+      const batchStudents = students.filter((s) => s.batch === selectedBatchId);
       const presentStudents = batchStudents
         .filter((s) => !absentIds.has(s._id))
         .map((s) => s._id);
@@ -223,7 +264,6 @@ const AttendancePage = () => {
 
   return (
     <div className="space-y-8 pb-10">
-      
       {/* --- HEADER --- */}
       <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-6">
         <div>
@@ -234,11 +274,10 @@ const AttendancePage = () => {
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4">
-          
           {/* Styled Batch Selector */}
           <div className="relative group min-w-[220px]">
             <div className="absolute left-3 top-1/2 -translate-y-1/2 text-rose-500 pointer-events-none z-10">
-               <Layers size={18} />
+              <Layers size={18} />
             </div>
             <select
               value={selectedBatchId}
@@ -258,7 +297,7 @@ const AttendancePage = () => {
               ))}
             </select>
             <div className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
-               <ChevronDown size={16} />
+              <ChevronDown size={16} />
             </div>
           </div>
 
@@ -270,16 +309,16 @@ const AttendancePage = () => {
               dateFormat="EEE, MMM d, yyyy"
               customInput={<CustomDateInput />}
               popperPlacement="bottom-end"
+              filterDate={(date) => isDateAllowed(date)} // ✅ only allow class days
+              disabled={!selectedBatchId} // ✅ disabled until batch selected
             />
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
         {/* --- LEFT PANEL: Attendance Marking --- */}
         <div className="lg:col-span-2 bg-white rounded-3xl shadow-sm border border-slate-100 flex flex-col overflow-hidden h-[600px]">
-          
           {/* Card Header */}
           <div className="px-6 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3 bg-slate-50/50">
             <div className="flex items-center gap-3">
@@ -291,7 +330,8 @@ const AttendancePage = () => {
                   Mark Attendance
                 </h3>
                 <p className="text-xs text-slate-500 hidden sm:block">
-                   Tap row to mark <span className="text-rose-600 font-bold">Absent</span>
+                  Tap row to mark{" "}
+                  <span className="text-rose-600 font-bold">Absent</span>
                 </p>
               </div>
             </div>
@@ -318,18 +358,25 @@ const AttendancePage = () => {
           <div className="flex-1 overflow-y-auto custom-scrollbar relative bg-white">
             {isLoading ? (
               <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/90 z-10">
-                <Loader2 size={32} className="animate-spin text-rose-500 mb-2" />
-                <p className="text-xs text-slate-500 font-medium">Loading roster...</p>
+                <Loader2
+                  size={32}
+                  className="animate-spin text-rose-500 mb-2"
+                />
+                <p className="text-xs text-slate-500 font-medium">
+                  Loading roster...
+                </p>
               </div>
             ) : !selectedBatchId ? (
               <div className="flex flex-col items-center justify-center h-full text-slate-400 p-8 text-center">
                 <div className="bg-slate-50 p-4 rounded-full mb-3">
-                    <Layers size={32} className="opacity-40" />
+                  <Layers size={32} className="opacity-40" />
                 </div>
                 <p className="text-sm font-semibold text-slate-600">
                   No Batch Selected
                 </p>
-                <p className="text-xs mt-1">Please select a batch above to start.</p>
+                <p className="text-xs mt-1">
+                  Please select a batch above to start.
+                </p>
               </div>
             ) : filteredStudents.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-slate-400 p-8 text-center">
@@ -353,8 +400,8 @@ const AttendancePage = () => {
                         key={s._id}
                         onClick={() => toggleAbsent(s._id)}
                         className={`cursor-pointer transition-all duration-200 group border-l-4 ${
-                          isAbsent 
-                            ? "bg-rose-50/40 border-l-rose-500" 
+                          isAbsent
+                            ? "bg-rose-50/40 border-l-rose-500"
                             : "hover:bg-slate-50 border-l-transparent"
                         }`}
                       >
@@ -366,7 +413,11 @@ const AttendancePage = () => {
                                 : "bg-white border-slate-200 text-slate-300 group-hover:border-rose-200"
                             }`}
                           >
-                            {isAbsent ? <XCircle size={16} /> : <Check size={16} />}
+                            {isAbsent ? (
+                              <XCircle size={16} />
+                            ) : (
+                              <Check size={16} />
+                            )}
                           </div>
                         </td>
                         <td className="py-3 px-6">
@@ -381,13 +432,19 @@ const AttendancePage = () => {
                               {s.name.charAt(0).toUpperCase()}
                             </div>
                             <div>
-                                <p className={`font-semibold transition-colors ${
-                                    isAbsent ? "text-rose-700" : "text-slate-700"
-                                }`}>
-                                    {s.name}
+                              <p
+                                className={`font-semibold transition-colors ${
+                                  isAbsent ? "text-rose-700" : "text-slate-700"
+                                }`}
+                              >
+                                {s.name}
+                              </p>
+                              {/* Show parent name if available */}
+                              {s.parentName && (
+                                <p className="text-[10px] text-slate-400 leading-none mt-0.5">
+                                  p: {s.parentName}
                                 </p>
-                                {/* Show parent name if available */}
-                                {s.parentName && <p className="text-[10px] text-slate-400 leading-none mt-0.5">p: {s.parentName}</p>}
+                              )}
                             </div>
                           </div>
                         </td>
@@ -419,10 +476,16 @@ const AttendancePage = () => {
 
             <button
               onClick={handleSave}
-              disabled={saving || !selectedBatchId || filteredStudents.length === 0}
+              disabled={
+                saving || !selectedBatchId || filteredStudents.length === 0
+              }
               className="px-6 py-2.5 rounded-xl bg-linear-to-r from-rose-500 to-pink-600 text-white text-sm font-bold shadow-lg shadow-rose-500/20 hover:shadow-rose-500/30 hover:-translate-y-0.5 transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+              {saving ? (
+                <Loader2 size={18} className="animate-spin" />
+              ) : (
+                <Save size={18} />
+              )}
               {saving ? "Saving..." : "Save Attendance"}
             </button>
           </div>
@@ -473,7 +536,9 @@ const AttendancePage = () => {
                           {s.name}
                         </p>
                         <p className="text-[10px] text-slate-500">
-                          {s.phone ? `Ph: ${s.phone}` : s.parentName || "No info"}
+                          {s.phone
+                            ? `Ph: ${s.phone}`
+                            : s.parentName || "No info"}
                         </p>
                       </div>
                     </div>

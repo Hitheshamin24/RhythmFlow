@@ -141,6 +141,22 @@ const FinancePage = () => {
     Profit: m.profit,
   }));
 
+  useEffect(() => {
+    const init = async () => {
+      try {
+        const res = await getFinanceSummary();
+        console.log("🔍 Finance summary from API:", res.data); // <-- add this
+        setSummary(res.data);
+        await updateGraph(6);
+      } catch (err) {
+        setError("Failed to load finance data");
+      } finally {
+        setInitialLoading(false);
+      }
+    };
+    init();
+  }, []);
+
   // --- NEW LOGIC FOR SMOOTH TOGGLE ---
   const monthOptions = [3, 6, 12];
   const activeIndex = monthOptions.indexOf(monthsRange);
