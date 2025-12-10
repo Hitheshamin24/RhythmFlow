@@ -11,16 +11,16 @@ const studioSchema = new mongoose.Schema(
 
     email: {
       type: String,
-      required: true,   // ✅ NOW REQUIRED
-      unique: true,     // ✅ NOW UNIQUE
+      required: true,
+      unique: true,
       trim: true,
-      lowercase: true, // ✅ prevents duplicate case issues
+      lowercase: true,
     },
 
     phone: {
       type: String,
-      required: true,   // ✅ NOW REQUIRED
-      unique: true,     // ✅ NOW UNIQUE
+      required: true,
+      unique: true,
       trim: true,
     },
 
@@ -37,7 +37,7 @@ const studioSchema = new mongoose.Schema(
       type: Date,
     },
 
-    // 🔹 Email verification flow
+    // 🔹 Email verification flow (Register & Login)
     emailVerified: {
       type: Boolean,
       default: false,
@@ -46,6 +46,23 @@ const studioSchema = new mongoose.Schema(
       type: String,
     },
     emailVerificationOtpExpires: {
+      type: Date,
+    },
+
+    // 🔹 Profile update OTP flow (Settings Page)
+    pendingEmail: {
+      type: String,
+      lowercase: true,
+      trim: true,
+    },
+    pendingPhone: {
+      type: String,
+      trim: true,
+    },
+    profileOtp: {
+      type: String,
+    },
+    profileOtpExpires: {
       type: Date,
     },
   },

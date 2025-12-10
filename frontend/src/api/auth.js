@@ -28,3 +28,10 @@ export const resetPasswordWithOtp = ({
     otp,
     newPassword,
   });
+
+  export const verifyEmailOtp = ({ className, email, otp }) =>
+  client.post("/auth/verify-email", {
+    className: className || undefined,
+    email: email || undefined,
+    otp,
+  });

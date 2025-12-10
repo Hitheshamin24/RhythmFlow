@@ -1,11 +1,9 @@
-// src/api/studio.js
 import client from "./client";
 
 export const getStudioProfile = () => client.get("/studio/me");
-
-export const updateStudioProfile = (payload) =>
-  client.put("/studio/me", payload);
-// payload can be { email, phone, className }
-
+export const updateStudioProfile = (data) => client.put("/studio/me", data);
 export const changeStudioPassword = (currentPassword, newPassword) =>
   client.post("/studio/change-password", { currentPassword, newPassword });
+
+export const verifyProfileOtp = (otp) =>
+  client.post("/studio/verify-profile-otp", { otp });
