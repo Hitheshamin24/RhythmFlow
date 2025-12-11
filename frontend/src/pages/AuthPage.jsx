@@ -276,7 +276,7 @@ const AuthPage = () => {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-              DNCR
+              D N C R
             </h1>
             <p className="text-slate-500 text-sm mt-1 font-medium">
               {mode === "login" ? "Welcome back, Studio Owner" : "Start your journey with us"}
