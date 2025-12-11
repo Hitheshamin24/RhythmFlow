@@ -285,11 +285,12 @@ const AuthPage = () => {
           </div>
           <div>
  <h1
-  className="text-6xl tracking-[0.35em] text-slate-900"
-  style={{ fontFamily: "Bebas Neue" }}
+  className="text-4xl font-bold tracking-[0.25em] text-slate-900"
+  style={{ fontFamily: "Inter Tight" }}
 >
-  DNCR
+  D N C R
 </h1>
+
 
 
 
