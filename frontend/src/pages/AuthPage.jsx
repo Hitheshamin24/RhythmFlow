@@ -276,7 +276,7 @@ const AuthPage = () => {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-              RhythmFlow
+              DNCR
             </h1>
             <p className="text-slate-500 text-sm mt-1 font-medium">
               {mode === "login" ? "Welcome back, Studio Owner" : "Start your journey with us"}
@@ -367,7 +367,7 @@ const AuthPage = () => {
       </div>
 
       <div className="absolute bottom-6 text-white/30 text-xs font-medium tracking-wide">
-        © 2025 RhythmFlow. All rights reserved.
+        © 2025 DNCR. All rights reserved.
       </div>
 
       {/* ================= MODALS ================= */}
