@@ -91,7 +91,7 @@ const Sidebar = () => {
           
           <div className={`flex flex-col overflow-hidden transition-all duration-300 
             ${collapsed ? "md:w-0 md:opacity-0" : "w-auto opacity-100"}`}>
-            <span className="text-lg font-bold tracking-wide text-white">RythmFlow</span>
+            <span className="text-lg font-bold tracking-wider text-white"> D N C R</span>
             <span className="text-[10px] uppercase tracking-wider text-pink-200/60 truncate">
               {studioName}
             </span>
