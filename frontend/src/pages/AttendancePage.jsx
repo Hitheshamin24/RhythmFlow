@@ -95,54 +95,64 @@ const AttendancePage = () => {
       console.error("Failed to load batches", err);
     }
   };
+// Replace your current loadAttendance function with this
+const loadAttendance = async (dateObj = selectedDate, batchId = selectedBatchId) => {
+  if (!dateObj || !batchId) {
+    setAbsentIds(new Set());
+    return;
+  }
 
-  // Load Attendance (batch + date)
-  const loadAttendance = async (
-    dateObj = selectedDate,
-    batchId = selectedBatchId
-  ) => {
-    if (!dateObj || !batchId) {
+  try {
+    setLoadingAttendance(true);
+    setError("");
+    setInfo("");
+
+    const dateString = formatDateForBackend(dateObj);
+
+    // NOTE: use the exact path your backend is mounted on.
+    // If your server router is mounted as app.use("/api/attendence", ...) then call "/attendence".
+    // If it's "/api/attendance" then call "/attendance".
+    const res = await client.get("/attendance", {
+      params: { date: dateString, batch: batchId },
+      // allow 404 responses so we can treat "no record" specially instead of throwing
+      validateStatus: (status) => status >= 200 && status < 500,
+    });
+
+    if (res.status === 404) {
+      // no record for this date — default to everyone present
       setAbsentIds(new Set());
+      setInfo(`No record found. Defaulting to all present.`);
       return;
     }
-    try {
-      setLoadingAttendance(true);
-      setError("");
-      setInfo("");
 
-      const dateString = formatDateForBackend(dateObj);
+    // res.data.presentStudents is expected to be an array of IDs (strings or ObjectIds)
+    const present = res.data?.presentStudents; // undefined never happens here because 404 handled above, but keep safe
+    const batchStudents = students.filter((s) => s.batch === batchId);
 
-      const res = await client.get("/attendance", {
-        params: { date: dateString, batch: batchId },
-      });
+    // Build a set of string IDs for comparison (ObjectId -> string)
+    const presentSet = new Set((present || []).map((id) => id.toString()));
 
-      const present = res.data?.presentStudents || [];
-      const batchStudents = students.filter((s) => s.batch === batchId);
+    const newAbsentIds = new Set(
+      batchStudents
+        .filter((s) => !presentSet.has(s._id.toString()))
+        .map((s) => s._id)
+    );
 
-      if (present.length === 0) {
-        // Treat as "no attendance yet" → everyone is present by default
-        setAbsentIds(new Set());
-        setInfo(`No record found. Defaulting to all present.`);
-      } else {
-        // Normal case: calculate absentees based on who is NOT in the present list
-        const presentSet = new Set(present.map((s) => s._id));
-        const newAbsentIds = new Set(
-          batchStudents.filter((s) => !presentSet.has(s._id)).map((s) => s._id)
-        );
+    setAbsentIds(newAbsentIds);
+    setInfo(
+      `Loaded: ${(present || []).length} Present, ${
+        batchStudents.length - (present || []).length
+      } Absent`
+    );
+  } catch (err) {
+    console.error("loadAttendance error:", err);
+    setAbsentIds(new Set());
+    setError("Failed to load attendance.");
+  } finally {
+    setLoadingAttendance(false);
+  }
+};
 
-        setAbsentIds(newAbsentIds);
-        setInfo(
-          `Loaded: ${present.length} Present, ${
-            batchStudents.length - present.length
-          } Absent`
-        );
-      }
-    } catch (err) {
-      setAbsentIds(new Set());
-    } finally {
-      setLoadingAttendance(false);
-    }
-  };
 
   useEffect(() => {
     loadStudents();
