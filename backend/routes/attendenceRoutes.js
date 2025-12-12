@@ -128,4 +128,30 @@ router.get("/summary", async (req, res) => {
   }
 });
 
+// GET /api/attendence?date=YYYY-MM-DD&batch=<batchId?>
+// returns { date, presentStudents: [id, id, ...] } or 404 if not found
+router.get("/", async (req, res) => {
+  try {
+    const { date } = req.query;
+    if (!date) {
+      return res.status(400).json({ message: "Missing date (YYYY-MM-DD) in query" });
+    }
+
+    const attendance = await Attendence.findOne({ studio: req.studioId, date }).lean();
+    if (!attendance) {
+      return res.status(404).json({ message: "No attendance record for this date" });
+    }
+
+    // attendance.presentStudents should be an array of ids (ObjectId or string)
+    // return as-is so frontend can handle as array of IDs
+    return res.json({
+      date: attendance.date,
+      presentStudents: attendance.presentStudents || [],
+    });
+  } catch (e) {
+    console.error("Failed to fetch attendance", e);
+    return res.status(500).json({ message: "Server error" });
+  }
+});
+
 module.exports = router;
