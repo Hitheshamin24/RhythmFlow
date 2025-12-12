@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const attendenceSchema = new mongoose.Schema(
+const attendanceSchema = new mongoose.Schema(
   {
     studio: {
       type: mongoose.Schema.Types.ObjectId,
@@ -20,5 +20,5 @@ const attendenceSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-attendenceSchema.index({ studio: 1, date: 1 }, { unique: true });
-module.exports = mongoose.model("Attendence", attendenceSchema);
+attendanceSchema.index({ studio: 1, date: 1 }, { unique: true });
+module.exports = mongoose.model("Attendance", attendanceSchema);

@@ -1,14 +1,14 @@
 const express = require("express");
-const Attendence = require("../models/Attenence");
 const Student = require("../models/Student");
 const protect = require("../middleware/authMiddleware");
+const Attendance = require("../models/Attendance");
 
 const router = express.Router();
 
 router.use(protect);
 
-// POST/api/attendence
-// save or update attendence for a given date
+// POST/api/attendance
+// save or update attendance for a given date
 // body:{ date"2025-11-27" presenet students:["StudentID1","StudentID2".....]}
 
 router.post("/", async (req, res) => {
@@ -37,12 +37,12 @@ router.post("/", async (req, res) => {
         .json({ message: "Some students are not in this studio" });
     }
 
-    const attendence = await Attendence.findOneAndUpdate(
+    const attendance = await Attendance.findOneAndUpdate(
       { studio: req.studioId, date },
       { presentStudents: validIds },
       { upsert: true, new: true }
     );
-    res.json(attendence);
+    res.json(attendance);
   } catch (e) {
     console.error("Save attendence error", e);
     res.status(500).json({ message: "Server error" });
@@ -67,7 +67,7 @@ router.get("/summary", async (req, res) => {
     }
 
     // 2. Get ALL attendance records for this studio
-    const records = await Attendence.find({ studio: studioId }).select(
+    const records = await Attendance.find({ studio: studioId }).select(
       "date presentStudents"
     );
 
@@ -137,7 +137,7 @@ router.get("/", async (req, res) => {
       return res.status(400).json({ message: "Missing date (YYYY-MM-DD) in query" });
     }
 
-    const attendance = await Attendence.findOne({ studio: req.studioId, date }).lean();
+    const attendance = await Attendance.findOne({ studio: req.studioId, date }).lean();
     if (!attendance) {
       return res.status(404).json({ message: "No attendance record for this date" });
     }
