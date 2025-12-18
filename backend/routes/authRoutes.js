@@ -3,78 +3,45 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const Studio = require("../models/Studio");
 const transporter = require("../utils/mailer");
-// const { sendSms } = require("../utils/smsService");
 
 const router = express.Router();
 
-const nodemailer = require("nodemailer");
-// POST /api/auth/register
+/* ======================================================
+   REGISTER
+====================================================== */
 router.post("/register", async (req, res) => {
   try {
     const { className, email, password, phone } = req.body;
 
-    if (!className || !password || !email || !phone) {
-      return res
-        .status(400)
-        .json({
-          message: "className, email, phone and password are required",
-        });
+    if (!className || !email || !password || !phone) {
+      return res.status(400).json({
+        message: "className, email, phone and password are required",
+      });
     }
 
-    // 1) Check if a studio with this className already exists
     let studio = await Studio.findOne({ className });
 
-    // ✅ CASE A: Studio exists and is ALREADY VERIFIED → block
+    // ❌ Already verified studio
     if (studio && studio.emailVerified) {
       return res
         .status(400)
         .json({ message: "Dance class name already registered" });
     }
 
-    // ✅ CASE B: Studio exists but is NOT verified yet → allow "correction"
+    // 🔁 Update unverified studio
     if (studio && !studio.emailVerified) {
-      // Make sure the new email/phone are not used by some OTHER studio
-      const existingByEmail = await Studio.findOne({
-        email,
-        _id: { $ne: studio._id },
-      });
-      if (existingByEmail) {
-        return res.status(400).json({ message: "Email already registered" });
-      }
-
-      const existingByPhone = await Studio.findOne({
-        phone,
-        _id: { $ne: studio._id },
-      });
-      if (existingByPhone) {
-        return res.status(400).json({ message: "Phone already registered" });
-      }
-
-      // Update fields (correcting the registration)
       studio.email = email.toLowerCase().trim();
       studio.phone = phone.trim();
       studio.password = await bcrypt.hash(password, 10);
 
-      // Generate new email verification OTP
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
       studio.emailVerificationOtp = otp;
-      studio.emailVerificationOtpExpires = new Date(
-        Date.now() + 10 * 60 * 1000
-      ); // 10 min
+      studio.emailVerificationOtpExpires = new Date(Date.now() + 10 * 60 * 1000);
 
       await studio.save();
 
-      const message = `Your RhythmFlow email verification OTP is: ${otp}. It is valid for 10 minutes.`;
-      await transporter.sendMail({
-        from: process.env.EMAIL_USER,
-        to: studio.email,
-        subject: "RhythmFlow Email Verification OTP",
-        text: message,
-      });
-
-      return res.status(200).json({
-        message:
-          "Existing unverified studio updated. Please verify with the new OTP.",
+      res.json({
+        message: "OTP sent. Please verify your email.",
         studio: {
           id: studio._id,
           className: studio.className,
@@ -83,21 +50,19 @@ router.post("/register", async (req, res) => {
           emailVerified: studio.emailVerified,
         },
       });
+
+      // 🔥 NON-BLOCKING EMAIL
+      transporter.sendMail({
+        from: process.env.EMAIL_USER,
+        to: studio.email,
+        subject: "RhythmFlow Email Verification OTP",
+        text: `Your OTP is ${otp}. Valid for 10 minutes.`,
+      }).catch(console.error);
+
+      return;
     }
 
-    // ✅ CASE C: No studio with this className yet → normal fresh registration
-
-    // Check duplicates by email/phone
-    const existingByEmail = await Studio.findOne({ email });
-    if (existingByEmail) {
-      return res.status(400).json({ message: "Email already registered" });
-    }
-
-    const existingByPhone = await Studio.findOne({ phone });
-    if (existingByPhone) {
-      return res.status(400).json({ message: "Phone already registered" });
-    }
-
+    // ✅ New studio
     const hashed = await bcrypt.hash(password, 10);
 
     studio = await Studio.create({
@@ -107,25 +72,13 @@ router.post("/register", async (req, res) => {
       password: hashed,
     });
 
-    // Generate email verification OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     studio.emailVerificationOtp = otp;
-    studio.emailVerificationOtpExpires = new Date(
-      Date.now() + 10 * 60 * 1000
-    ); // 10 mins
+    studio.emailVerificationOtpExpires = new Date(Date.now() + 10 * 60 * 1000);
     await studio.save();
 
-    const message = `Your RhythmFlow email verification OTP is: ${otp}. It is valid for 10 minutes.`;
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      to: studio.email,
-      subject: "RhythmFlow Email Verification OTP",
-      text: message,
-    });
-
-    return res.status(201).json({
-      message:
-        "Studio registered successfully. Please verify your email using the OTP sent.",
+    res.status(201).json({
+      message: "Registered successfully. OTP sent to email.",
       studio: {
         id: studio._id,
         className: studio.className,
@@ -134,77 +87,78 @@ router.post("/register", async (req, res) => {
         emailVerified: studio.emailVerified,
       },
     });
-  } catch (e) {
-    console.error("Register Error", e);
-    res.status(500).json({ message: "Server Error" });
+
+    transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: studio.email,
+      subject: "RhythmFlow Email Verification OTP",
+      text: `Your OTP is ${otp}. Valid for 10 minutes.`,
+    }).catch(console.error);
+
+  } catch (err) {
+    console.error("Register Error:", err);
+    res.status(500).json({ message: "Server error" });
   }
 });
 
-//   POST /api/auth/login
-// body{className,password}
+/* ======================================================
+   LOGIN
+====================================================== */
 router.post("/login", async (req, res) => {
   try {
     const { className, password } = req.body;
+
     if (!className || !password) {
-      return res
-        .status(400)
-        .json({ message: "ClassName and password are required" });
+      return res.status(400).json({
+        message: "ClassName and password are required",
+      });
     }
 
     const studio = await Studio.findOne({ className });
     if (!studio) {
-      return res.status(400).json({ message: "Dance class Not found" });
+      return res.status(400).json({ message: "Dance class not found" });
     }
 
     const isMatch = await bcrypt.compare(password, studio.password);
     if (!isMatch) {
-      return res.status(400).json({ message: "Invalid Password" });
+      return res.status(400).json({ message: "Invalid password" });
     }
 
-    // 🟡 If email NOT verified → send OTP instead of logging in
+    // 🟡 Email not verified
     if (!studio.emailVerified) {
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
       studio.emailVerificationOtp = otp;
-      studio.emailVerificationOtpExpires = new Date(
-        Date.now() + 10 * 60 * 1000
-      ); // 10 mins
+      studio.emailVerificationOtpExpires = new Date(Date.now() + 10 * 60 * 1000);
       await studio.save();
 
-      const message = `Your RhythmFlow email verification OTP is: ${otp}. It is valid for 10 minutes.`;
+      res.json({
+        requiresVerification: true,
+        message: "Email not verified. OTP sent.",
+        studio: {
+          id: studio._id,
+          className: studio.className,
+          email: studio.email,
+          phone: studio.phone,
+          emailVerified: studio.emailVerified,
+        },
+      });
 
-      // send email
-      if (studio.email) {
-        await transporter.sendMail({
-          from: process.env.EMAIL_USER,
-          to: studio.email,
-          subject: "RhythmFlow Email Verification OTP",
-          text: message,
-        });
-      }
+      transporter.sendMail({
+        from: process.env.EMAIL_USER,
+        to: studio.email,
+        subject: "RhythmFlow Email Verification OTP",
+        text: `Your OTP is ${otp}. Valid for 10 minutes.`,
+      }).catch(console.error);
 
-      // (optional) also SMS if you want, similar to forgot-password:
-      // if (studio.phone) {
-      //   await sendSms(studio.phone, message);
-      // }
-
-      // return res.json({
-      //   requiresVerification: true,
-      //   message:
-      //     "Email not verified. OTP has been sent to your registered email.",
-      //   studio: {
-      //     id: studio._id,
-      //     className: studio.className,
-      //     email: studio.email,
-      //     phone: studio.phone,
-      //     emailVerified: studio.emailVerified,
-      //   },
-      // });
+      return;
     }
 
-    // ✅ Normal login when email is already verified
-    const token = jwt.sign({ studioId: studio._id }, process.env.JWT_SECRET, {
-      expiresIn: "7d",
-    });
+    // ✅ Normal login
+    const token = jwt.sign(
+      { studioId: studio._id },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
 
     res.json({
       token,
@@ -217,184 +171,112 @@ router.post("/login", async (req, res) => {
       },
     });
   } catch (err) {
-    console.error("Login Error", err);
-    res.status(500).json({ message: "Sever error" });
+    console.error("Login Error:", err);
+    res.status(500).json({ message: "Server error" });
   }
 });
 
-
-// POST /api/auth/forgot-password
-// body: { className?, email?, phone? }  --> at least ONE required
+/* ======================================================
+   FORGOT PASSWORD (EMAIL ONLY)
+====================================================== */
 router.post("/forgot-password", async (req, res) => {
   try {
-    const { className, email, phone } = req.body;
+    const { className, email } = req.body;
 
-    if (!className && !email && !phone) {
-      return res
-        .status(400)
-        .json({ message: "Provide className or email or phone" });
-    }
-
-    let studio;
-
-    if (className) {
-      studio = await Studio.findOne({ className });
-    } else if (email) {
-      studio = await Studio.findOne({ email });
-    } else if (phone) {
-      studio = await Studio.findOne({ phone });
-    }
+    const studio = await Studio.findOne(
+      className ? { className } : { email }
+    );
 
     if (!studio) {
-      return res
-        .status(400)
-        .json({ message: "No account found for given details" });
+      return res.status(400).json({ message: "Account not found" });
     }
 
-    // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-
-    // Save OTP + expiry 10 mins from now
     studio.resetOtp = otp;
     studio.resetOtpExpires = new Date(Date.now() + 10 * 60 * 1000);
     await studio.save();
 
-    const message = `Your RhythmFlow password reset OTP is: ${otp}. It is valid for 10 minutes.`;
-
-    // 📧 Send Email (to the email stored in Studio)
-    if (studio.email) {
-      await transporter.sendMail({
-        from: process.env.EMAIL_USER,
-        to: studio.email,
-        subject: "RhythmFlow Password Reset OTP",
-        text: message,
-      });
-    }
-
-    // // 📱 Send SMS (to the phone stored in Studio)
-    // if (studio.phone) {
-      // await sendSms(studio.phone, message);
-    // }
-
-    return res.json({
-      message:
-        "OTP sent to your registered email and phone (if available). Valid for 10 minutes.",
+    res.json({
+      message: "Password reset OTP sent to your email.",
     });
-  } catch (e) {
-    console.error("Forgot password error", e);
+
+    transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: studio.email,
+      subject: "RhythmFlow Password Reset OTP",
+      text: `Your OTP is ${otp}. Valid for 10 minutes.`,
+    }).catch(console.error);
+
+  } catch (err) {
+    console.error("Forgot Password Error:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
-// POST /api/auth/reset-password-otp
-// body: { className?, email?, phone?, otp, newPassword }
+
+/* ======================================================
+   RESET PASSWORD
+====================================================== */
 router.post("/reset-password-otp", async (req, res) => {
   try {
-    const { className, email, phone, otp, newPassword } = req.body;
+    const { className, email, otp, newPassword } = req.body;
 
-    if (!otp || !newPassword) {
-      return res
-        .status(400)
-        .json({ message: "OTP and newPassword are required" });
+    const studio = await Studio.findOne(
+      className ? { className } : { email }
+    );
+
+    if (
+      !studio ||
+      !studio.resetOtp ||
+      studio.resetOtp !== otp ||
+      studio.resetOtpExpires < new Date()
+    ) {
+      return res.status(400).json({ message: "Invalid or expired OTP" });
     }
 
-    if (!className && !email && !phone) {
-      return res
-        .status(400)
-        .json({ message: "Provide className or email or phone" });
-    }
-
-    let studio;
-    if (className) {
-      studio = await Studio.findOne({ className });
-    } else if (email) {
-      studio = await Studio.findOne({ email });
-    } else if (phone) {
-      studio = await Studio.findOne({ phone });
-    }
-
-    if (!studio || !studio.resetOtp || !studio.resetOtpExpires) {
-      return res
-        .status(400)
-        .json({ message: "No OTP request found for this account" });
-    }
-
-    if (studio.resetOtpExpires < new Date()) {
-      return res.status(400).json({ message: "OTP has expired" });
-    }
-
-    if (studio.resetOtp !== otp) {
-      return res.status(400).json({ message: "Invalid OTP" });
-    }
-
-    // Update password
-    const hashed = await bcrypt.hash(newPassword, 10);
-    studio.password = hashed;
+    studio.password = await bcrypt.hash(newPassword, 10);
     studio.resetOtp = undefined;
     studio.resetOtpExpires = undefined;
-
     await studio.save();
 
-    res.json({ message: "Password has been reset successfully." });
-  } catch (e) {
-    console.error("Reset password with OTP error", e);
+    res.json({ message: "Password reset successful" });
+  } catch (err) {
+    console.error("Reset Password Error:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
 
-// POST /api/auth/verify-email
-// body: { className?, email?, otp }
+/* ======================================================
+   VERIFY EMAIL
+====================================================== */
 router.post("/verify-email", async (req, res) => {
   try {
     const { className, email, otp } = req.body;
 
-    if (!otp) {
-      return res.status(400).json({ message: "OTP is required" });
-    }
-
-    if (!className && !email) {
-      return res
-        .status(400)
-        .json({ message: "Provide className or email to verify" });
-    }
-
-    let studio;
-    if (className) {
-      studio = await Studio.findOne({ className });
-    } else if (email) {
-      studio = await Studio.findOne({ email });
-    }
+    const studio = await Studio.findOne(
+      className ? { className } : { email }
+    );
 
     if (
       !studio ||
-      !studio.emailVerificationOtp ||
-      !studio.emailVerificationOtpExpires
+      studio.emailVerificationOtp !== otp ||
+      studio.emailVerificationOtpExpires < new Date()
     ) {
-      return res
-        .status(400)
-        .json({ message: "No verification request found for this account" });
+      return res.status(400).json({ message: "Invalid or expired OTP" });
     }
 
-    if (studio.emailVerificationOtpExpires < new Date()) {
-      return res.status(400).json({ message: "OTP has expired" });
-    }
-
-    if (studio.emailVerificationOtp !== otp) {
-      return res.status(400).json({ message: "Invalid OTP" });
-    }
-
-    // ✅ Mark email verified
     studio.emailVerified = true;
     studio.emailVerificationOtp = undefined;
     studio.emailVerificationOtpExpires = undefined;
     await studio.save();
 
-    // Create login token now
-    const token = jwt.sign({ studioId: studio._id }, process.env.JWT_SECRET, {
-      expiresIn: "7d",
-    });
+    const token = jwt.sign(
+      { studioId: studio._id },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
 
-    return res.json({
-      message: "Email verified successfully.",
+    res.json({
+      message: "Email verified successfully",
       token,
       studio: {
         id: studio._id,
@@ -404,8 +286,8 @@ router.post("/verify-email", async (req, res) => {
         emailVerified: studio.emailVerified,
       },
     });
-  } catch (e) {
-    console.error("Verify email error", e);
+  } catch (err) {
+    console.error("Verify Email Error:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
