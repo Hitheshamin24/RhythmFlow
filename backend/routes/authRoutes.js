@@ -273,7 +273,7 @@ router.post("/forgot-password", async (req, res) => {
 
     // // 📱 Send SMS (to the phone stored in Studio)
     // if (studio.phone) {
-      await sendSms(studio.phone, message);
+      // await sendSms(studio.phone, message);
     // }
 
     return res.json({
