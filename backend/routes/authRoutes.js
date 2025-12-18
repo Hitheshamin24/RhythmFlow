@@ -3,7 +3,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const Studio = require("../models/Studio");
 const transporter = require("../utils/mailer");
-const { sendSms } = require("../utils/smsService");
+// const { sendSms } = require("../utils/smsService");
 
 const router = express.Router();
 
@@ -187,18 +187,18 @@ router.post("/login", async (req, res) => {
       //   await sendSms(studio.phone, message);
       // }
 
-      return res.json({
-        requiresVerification: true,
-        message:
-          "Email not verified. OTP has been sent to your registered email.",
-        studio: {
-          id: studio._id,
-          className: studio.className,
-          email: studio.email,
-          phone: studio.phone,
-          emailVerified: studio.emailVerified,
-        },
-      });
+      // return res.json({
+      //   requiresVerification: true,
+      //   message:
+      //     "Email not verified. OTP has been sent to your registered email.",
+      //   studio: {
+      //     id: studio._id,
+      //     className: studio.className,
+      //     email: studio.email,
+      //     phone: studio.phone,
+      //     emailVerified: studio.emailVerified,
+      //   },
+      // });
     }
 
     // ✅ Normal login when email is already verified
@@ -271,10 +271,10 @@ router.post("/forgot-password", async (req, res) => {
       });
     }
 
-    // 📱 Send SMS (to the phone stored in Studio)
-    if (studio.phone) {
+    // // 📱 Send SMS (to the phone stored in Studio)
+    // if (studio.phone) {
       await sendSms(studio.phone, message);
-    }
+    // }
 
     return res.json({
       message:
