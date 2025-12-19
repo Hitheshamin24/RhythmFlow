@@ -2,7 +2,7 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const Studio = require("../models/Studio");
 const protect = require("../middleware/authMiddleware");
-const transporter = require("../utils/mailer");
+const sendEmail = require("../utils/mailer");
 
 const router = express.Router();
 
@@ -103,12 +103,12 @@ router.put("/me", async (req, res) => {
       const message = `Your RhythmFlow profile update OTP is: ${otp}. It is valid for 10 minutes.`;
 
       if (emailChanged) {
-        await transporter.sendMail({
-          from: process.env.EMAIL_USER,
-          to: email,
-          subject: "RhythmFlow Profile Update OTP",
-          text: message,
-        });
+       await sendEmail({
+  to: studio.email,
+  subject: "RhythmFlow Email Verification OTP",
+  text: message,
+});
+
       }
 
       if (phoneChanged) {

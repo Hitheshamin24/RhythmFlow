@@ -2,7 +2,7 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const Studio = require("../models/Studio");
-const transporter = require("../utils/mailer");
+const sendEmail = require("../utils/mailer");
 
 const router = express.Router();
 
@@ -13,11 +13,9 @@ router.post("/register", async (req, res) => {
     const { className, email, password, phone } = req.body;
 
     if (!className || !password || !email || !phone) {
-      return res
-        .status(400)
-        .json({
-          message: "className, email, phone and password are required",
-        });
+      return res.status(400).json({
+        message: "className, email, phone and password are required",
+      });
     }
 
     // 1) Check if a studio with this className already exists
@@ -64,8 +62,7 @@ router.post("/register", async (req, res) => {
       await studio.save();
 
       const message = `Your RhythmFlow email verification OTP is: ${otp}. It is valid for 10 minutes.`;
-      await transporter.sendMail({
-        from: process.env.EMAIL_USER,
+      await sendEmail({
         to: studio.email,
         subject: "RhythmFlow Email Verification OTP",
         text: message,
@@ -109,14 +106,11 @@ router.post("/register", async (req, res) => {
     // Generate email verification OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     studio.emailVerificationOtp = otp;
-    studio.emailVerificationOtpExpires = new Date(
-      Date.now() + 10 * 60 * 1000
-    ); // 10 mins
+    studio.emailVerificationOtpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
     await studio.save();
 
     const message = `Your RhythmFlow email verification OTP is: ${otp}. It is valid for 10 minutes.`;
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
+    await sendEmail({
       to: studio.email,
       subject: "RhythmFlow Email Verification OTP",
       text: message,
@@ -173,8 +167,7 @@ router.post("/login", async (req, res) => {
 
       // send email
       if (studio.email) {
-        await transporter.sendMail({
-          from: process.env.EMAIL_USER,
+        await sendEmail({
           to: studio.email,
           subject: "RhythmFlow Email Verification OTP",
           text: message,
@@ -221,7 +214,6 @@ router.post("/login", async (req, res) => {
   }
 });
 
-
 // POST /api/auth/forgot-password
 // body: { className?, email?, phone? }  --> at least ONE required
 // POST /api/auth/forgot-password
@@ -254,11 +246,11 @@ router.post("/forgot-password", async (req, res) => {
 
     const message = `Your RhythmFlow password reset OTP is: ${otp}. It is valid for 10 minutes.`;
 
-    // 📧 Email ONLY
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
+
+    //  Email ONLY
+    await sendEmail({
       to: studio.email,
-      subject: "RhythmFlow Password Reset OTP",
+      subject: "RhythmFlow Email Verification OTP",
       text: message,
     });
 
