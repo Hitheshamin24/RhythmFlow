@@ -216,7 +216,7 @@ const FinancePage = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               
               {/* Projected Income Card - AMBER (Matches Revenue) */}
-              <div className="bg-white p-6 rounded-[1.5rem] border border-stone-100 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.05)] hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between h-36 relative overflow-hidden group">
+              <div className="bg-white p-6 rounded-3xl border border-stone-100 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.05)] hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between h-36 relative overflow-hidden group">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-amber-50/50 rounded-full -mr-10 -mt-10 group-hover:scale-110 transition-transform duration-700 ease-out"></div>
                 <div className="relative z-10">
                   <p className="text-xs font-bold uppercase tracking-wider text-stone-400">
@@ -233,7 +233,7 @@ const FinancePage = () => {
               </div>
 
               {/* Collected Card - EMERALD (Matches Money In) */}
-              <div className="bg-white p-6 rounded-[1.5rem] border border-stone-100 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.05)] hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between h-36 relative overflow-hidden">
+              <div className="bg-white p-6 rounded-3xl border border-stone-100 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.05)] hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between h-36 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-50 rounded-full -mr-8 -mt-8 opacity-50"></div>
                 <div className="relative z-10">
                   <p className="text-xs font-bold uppercase tracking-wider text-emerald-600/70">
@@ -249,7 +249,7 @@ const FinancePage = () => {
               </div>
 
               {/* Expenses Card - ROSE (Matches Brand/Expenses) */}
-              <div className="bg-white p-6 rounded-[1.5rem] border border-stone-100 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.05)] hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between h-36 relative overflow-hidden">
+              <div className="bg-white p-6 rounded-3xl border border-stone-100 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.05)] hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between h-36 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-24 h-24 bg-rose-50 rounded-full -mr-8 -mt-8 opacity-50"></div>
                 <div className="relative z-10">
                   <p className="text-xs font-bold uppercase tracking-wider text-rose-600/70">
@@ -265,7 +265,7 @@ const FinancePage = () => {
               </div>
 
               {/* Net Profit Card - CHOCOLATE GRADIENT */}
-              <div className="bg-gradient-to-br from-[#5D4037] to-[#3E2723] p-6 rounded-[1.5rem] shadow-lg shadow-stone-300 flex flex-col justify-between h-36 text-white relative overflow-hidden">
+              <div className="bg-linear-to-br from-[#5D4037] to-[#3E2723] p-6 rounded-3xl shadow-lg shadow-stone-300 flex flex-col justify-between h-36 text-white relative overflow-hidden">
                 <div className="absolute inset-0 bg-white/5 opacity-0 hover:opacity-10 transition-opacity duration-300"></div>
                 <div className="absolute -bottom-4 -right-4 text-white/10 transform rotate-12">
                    <TrendingUp size={80} />
@@ -296,7 +296,7 @@ const FinancePage = () => {
             {/* Charts Section */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
               {/* Left Chart */}
-              <div className="lg:col-span-2 bg-white rounded-[1.5rem] border border-stone-100 p-6 md:p-8 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.05)] relative overflow-hidden">
+              <div className="lg:col-span-2 bg-white rounded-3xl border border-stone-100 p-6 md:p-8 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.05)] relative overflow-hidden">
                 <div className="flex justify-between items-center mb-8">
                   <h3 className="text-lg font-bold font-serif text-[#2C1810] flex items-center gap-2">
                     <div className="bg-stone-100 p-2 rounded-lg text-stone-500">
@@ -391,7 +391,7 @@ const FinancePage = () => {
               </div>
 
               {/* Right Chart (Monthly Details) */}
-              <div className="bg-white rounded-[1.5rem] border border-stone-100 p-6 md:p-8 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.05)] flex flex-col h-full">
+              <div className="bg-white rounded-3xl border border-stone-100 p-6 md:p-8 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.05)] flex flex-col h-full">
                 <div className="mb-6">
                   <h3 className="text-xl font-bold font-serif text-[#2C1810]">
                     {selectedMonth?.label || "This Month"}
@@ -461,7 +461,7 @@ const FinancePage = () => {
             </div>
 
             {/* Expense List */}
-            <div className="bg-white rounded-[1.5rem] border border-stone-100 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.05)] overflow-hidden">
+            <div className="bg-white rounded-3xl border border-stone-100 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.05)] overflow-hidden">
               <div className="p-6 md:p-8 border-b border-stone-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <h3 className="text-lg font-bold font-serif text-[#2C1810]">
@@ -538,7 +538,7 @@ const FinancePage = () => {
       {/* --- ADD & DELETE MODALS --- */}
       {showAddModal && (
         <div className="fixed inset-0 bg-[#2C1810]/40 backdrop-blur-md flex items-center justify-center z-50 px-4 animate-in fade-in duration-300">
-          <div className="bg-white rounded-[2rem] w-full max-w-sm p-8 shadow-2xl border border-white/20 scale-100 animate-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-4xl w-full max-w-sm p-8 shadow-2xl border border-white/20 scale-100 animate-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center mb-8">
               <h3 className="text-xl font-bold font-serif text-[#2C1810] tracking-tight">
                 New Expense
@@ -626,7 +626,7 @@ const FinancePage = () => {
 
       {showDeleteModal && selectedExpense && (
         <div className="fixed inset-0 bg-[#2C1810]/40 backdrop-blur-md flex items-center justify-center z-50 px-4 animate-in fade-in duration-300">
-          <div className="bg-white rounded-[2rem] w-full max-w-sm p-8 shadow-2xl border border-white/20 scale-100 animate-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-4xl w-full max-w-sm p-8 shadow-2xl border border-white/20 scale-100 animate-in zoom-in-95 duration-200">
             <div className="flex flex-col items-center text-center">
               <div className="h-16 w-16 rounded-full bg-rose-50 flex items-center justify-center text-rose-500 mb-6 shadow-sm">
                 <Trash2 size={28} strokeWidth={1.5} />
