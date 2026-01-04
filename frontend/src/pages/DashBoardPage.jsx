@@ -10,7 +10,18 @@ import {
   MoreHorizontal,
   ArrowUpRight,
   Clock,
+  Briefcase,
+  CheckCircle2,
+  TrendingUp
 } from "lucide-react";
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+} from "recharts";
 
 const DashboardPage = () => {
   const [students, setStudents] = useState([]);
@@ -28,6 +39,7 @@ const DashboardPage = () => {
     currentRate: 0, // this month
     lastRate: 0, // previous month
   });
+  const [weeklyAttendance, setWeeklyAttendance] = useState([]);
 
   // ---- Loaders ----
   const loadStudents = async () => {
@@ -63,7 +75,8 @@ const DashboardPage = () => {
           loadStudents(),
           loadBatches(),
           loadPayments(),
-          loadAttendanceSummary(), // 🔹 add this
+          loadAttendanceSummary(),
+          loadWeeklyAttendance(),
         ]);
       } catch (err) {
         console.error(err);
@@ -77,6 +90,10 @@ const DashboardPage = () => {
     fetchAll();
   }, []);
 
+  const feePercentage = payments.total
+    ? Math.round((payments.paidCount / payments.total) * 100)
+    : 0;
+
   // ---- Derived Stats ----
   const totalStudents = students.length;
   const activeStudents = useMemo(
@@ -87,6 +104,11 @@ const DashboardPage = () => {
   const attendanceRate = totalStudents
     ? Math.round((activeStudents / totalStudents) * 100)
     : 0;
+  
+  const loadWeeklyAttendance = async () => {
+    const res = await client.get("/attendance/weekly");
+    setWeeklyAttendance(res.data || []);
+  };
 
   const monthlyRevenue = useMemo(() => {
     const paidList = payments.paid || [];
@@ -157,132 +179,168 @@ const DashboardPage = () => {
       : `${diff > 0 ? "+" : ""}${diff.toFixed(1)}% vs last month`;
 
   return (
-    <div className="space-y-8 pb-8">
+    // Applied Warm Background: bg-[#FFFBF7] matches the image's cream background
+    <div className="space-y-8 pb-10 bg-[#FFFBF7] min-h-screen p-6 md:p-8 font-sans text-stone-800">
+      {/* Header */}
+   
+
       {error && (
-        <div className="bg-rose-50 border border-rose-100 text-rose-600 px-4 py-3 rounded-xl text-sm mb-2">
-          {error}
+        <div className="bg-rose-50 border border-rose-200 text-rose-700 px-4 py-3 rounded-xl flex items-center gap-2 text-sm font-medium animate-in fade-in slide-in-from-top-2">
+          <Activity size={16} /> {error}
         </div>
       )}
 
       {/* --- Top Stats Row --- */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Students: Pink Theme */}
         <StatCard
           label="Total Students"
           value={String(totalStudents)}
-          icon={<Users size={22} />}
+          icon={<Users size={22} className="text-rose-500" />}
           subtext={`${activeStudents} active this month`}
           trend={activeStudents >= totalStudents / 2 ? "up" : "down"}
+          iconBg="bg-rose-50"
         />
+        {/* Revenue: Amber/Gold Theme (Matches image) */}
         <StatCard
           label="Monthly Revenue"
           value={`₹${monthlyRevenue.toLocaleString("en-IN")}`}
-          icon={<Banknote size={22} />}
-          subtext={`${payments.paidCount || 0} paid / ${
-            payments.total || 0
-          } students`}
+          icon={<Banknote size={22} className="text-amber-600" />}
+          subtext={`${payments.paidCount || 0} paid / ${payments.total || 0} students`}
           trend="up"
+          iconBg="bg-amber-50"
         />
+        {/* Classes: Stone/Neutral Theme */}
+        <StatCard
+          label="Classes Today"
+          value={String(upcomingClasses.length)}
+          icon={<Calendar size={22} className="text-stone-600" />}
+          subtext="Scheduled for today"
+          trend="neutral"
+          iconBg="bg-stone-100"
+        />
+        {/* Attendance: Stone/Rose Theme */}
         <StatCard
           label="Attendance Rate"
           value={`${currentRate.toFixed(1)}%`}
-          icon={<Activity size={22} />}
+          icon={<Activity size={22} className="text-stone-600" />}
           subtext={diffLabel}
           trend={diff >= 0 ? "up" : "down"}
+          iconBg="bg-stone-100"
         />
       </div>
 
       {/* --- Charts Row --- */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Weekly Attendance (Mock visualization, but based on counts if you want later) */}
-        <div className="lg:col-span-2 bg-white rounded-3xl p-6 shadow-sm border border-slate-100 relative overflow-hidden group">
-          <div className="flex justify-between items-start mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+        {/* Weekly Attendance */}
+        <div className="lg:col-span-2 bg-white rounded-3xl p-6 md:p-8 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.05)] border border-stone-100 relative overflow-hidden group">
+          <div className="flex justify-between items-center mb-8">
             <div>
-              <h2 className="text-lg font-bold text-slate-800">
+              <h2 className="text-xl font-bold font-serif text-[#2C1810] flex items-center gap-2">
                 Weekly Attendance
               </h2>
-              <p className="text-xs text-slate-400 font-medium uppercase tracking-wider mt-1">
-                Active vs Total (visual)
-              </p>
             </div>
-            <button className="p-2 hover:bg-slate-50 rounded-full text-slate-400 transition">
-              <MoreHorizontal size={20} />
+            <button className="text-xs font-semibold text-stone-400 hover:text-stone-600">
+               This Week
             </button>
           </div>
 
-          {/* CSS-only Mock Chart (Visual representation) */}
-          <div className="h-64 flex items-end justify-between px-2 gap-2 md:gap-4">
-            {[40, 65, 45, 80, 55, 90, 70].map((h, i) => (
-              <div
-                key={i}
-                className="w-full flex flex-col items-center gap-2 group/bar"
-              >
-                <div
-                  className="w-full max-w-10 bg-rose-500/10 rounded-t-xl relative overflow-hidden transition-all duration-300 hover:bg-rose-500/20"
-                  style={{ height: `${h}%` }}
-                >
-                  {/* Inner fill animation */}
-                  <div
-                    className="absolute bottom-0 left-0 w-full bg-rose-500 transition-all duration-1000"
-                    style={{
-                      height: "0%",
-                      animation: `fillBar 1s ease-out ${i * 0.1}s forwards`,
-                      "--target-height": "100%",
-                    }}
-                  ></div>
-                </div>
-                <span className="text-[10px] font-semibold text-slate-400">
-                  {["M", "T", "W", "T", "F", "S", "S"][i]}
-                </span>
-              </div>
-            ))}
+          <div className="h-72 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={weeklyAttendance} barGap={8}>
+                <XAxis 
+                  dataKey="day" 
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 12, fill: "#A8A29E", fontWeight: 500 }}
+                  dy={15}
+                />
+                <YAxis
+                  allowDecimals={false}
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 12, fill: "#A8A29E", fontWeight: 500 }}
+                  dx={-10}
+                />
+                <Tooltip
+                  cursor={{ fill: "#FFF1F2", opacity: 0.8 }}
+                  contentStyle={{
+                    borderRadius: "12px",
+                    border: "none",
+                    boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)",
+                    padding: "12px 16px",
+                    fontFamily: "inherit",
+                    backgroundColor: "#FFFFFF",
+                    color: "#2C1810"
+                  }}
+                />
+                {/* Updated to Rose color to match the area chart in your image */}
+                <Bar 
+                  dataKey="present" 
+                  radius={[6, 6, 6, 6]} 
+                  fill="#E11D48" 
+                  fillOpacity={0.8}
+                  maxBarSize={40}
+                  animationDuration={1500}
+                />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Finances Card */}
-        <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex flex-col">
+        {/* Finances Card (Donut) */}
+        <div className="bg-white rounded-3xl p-6 md:p-8 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.05)] border border-stone-100 flex flex-col justify-between">
           <div className="flex justify-between items-start mb-6">
             <div>
-              <h2 className="text-lg font-bold text-slate-800">Finances</h2>
-              <p className="text-xs text-slate-400 font-medium uppercase tracking-wider mt-1">
-                Current Month
+              <h2 className="text-xl font-bold font-serif text-[#2C1810]">Finances</h2>
+              <p className="text-xs text-stone-400 font-bold uppercase tracking-wider mt-1">
+                Collection Rate
               </p>
             </div>
-            <button className="text-xs font-semibold text-rose-600 bg-rose-50 px-3 py-1 rounded-full hover:bg-rose-100 transition">
-              View Report
-            </button>
           </div>
 
-          {/* Donut Chart Mockup */}
-          <div className="flex-1 flex items-center justify-center relative">
+          {/* Donut Chart */}
+          <div className="flex-1 flex items-center justify-center relative py-6">
             {/* Outer Ring */}
-            <div className="w-48 h-48 rounded-full border-12 border-slate-100 relative">
-              {/* Colored Segments (CSS ring) */}
-              <div className="absolute inset-0 rounded-full border-12 border-rose-500 border-t-transparent border-l-transparent -rotate-45"></div>
-            </div>
-            {/* Inner Text */}
-            <div className="absolute flex flex-col items-center">
-              <span className="text-3xl font-bold text-slate-800">
-                {payments.total
-                  ? Math.round((payments.paidCount / payments.total) * 100)
-                  : 0}
-                %
-              </span>
-              <span className="text-[10px] text-slate-400 uppercase tracking-wide">
-                Fee Collection
-              </span>
+            <div className="relative w-52 h-52 flex items-center justify-center">
+              {/* Progress Ring with Rose Gradient */}
+              <div
+                className="absolute inset-0 rounded-full"
+                style={{
+                  background: `conic-gradient(
+                    #E11D48 ${feePercentage * 3.6}deg,
+                    #F5F5F4 ${feePercentage * 3.6}deg
+                  )`,
+                  transform: 'rotate(-90deg)', 
+                  transition: 'background 1s ease-in-out'
+                }}
+              ></div>
+
+              {/* Inner cut-out */}
+              <div className="absolute w-40 h-40 bg-white rounded-full flex items-center justify-center"></div>
+
+              {/* Center Text */}
+              <div className="relative flex flex-col items-center z-10">
+                <span className="text-4xl font-black text-[#2C1810] tracking-tight">
+                  {feePercentage}%
+                </span>
+                <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wide mt-1">
+                  Collected
+                </span>
+              </div>
             </div>
           </div>
 
-          <div className="mt-6 flex justify-center gap-6">
+          <div className="flex justify-center gap-6 mt-2">
             <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-rose-500"></span>
-              <span className="text-sm text-slate-600 font-medium">
-                Paid Students
+              <span className="w-2.5 h-2.5 rounded-full bg-rose-600"></span>
+              <span className="text-xs text-stone-600 font-bold uppercase tracking-wide">
+                Paid
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-slate-200"></span>
-              <span className="text-sm text-slate-600 font-medium">
+              <span className="w-2.5 h-2.5 rounded-full bg-stone-200"></span>
+              <span className="text-xs text-stone-600 font-bold uppercase tracking-wide">
                 Pending
               </span>
             </div>
@@ -291,98 +349,114 @@ const DashboardPage = () => {
       </div>
 
       {/* --- Bottom Row --- */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
         {/* Recent Payments */}
-        <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-bold text-slate-800">
+        <div className="bg-white rounded-3xlp-6 md:p-8 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.05)] border border-stone-100">
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-xl font-bold font-serif text-[#2C1810] flex items-center gap-2">
               Recent Payments
             </h2>
             <ArrowUpRight
-              className="text-slate-400 cursor-pointer hover:text-rose-500 transition"
+              className="text-stone-300 cursor-pointer hover:text-rose-500 hover:scale-110 transition-all"
               size={20}
             />
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-3">
             {recentPayments.length === 0 ? (
-              <p className="text-xs text-slate-400">
-                No recent payments recorded yet.
-              </p>
+              <div className="flex flex-col items-center justify-center py-8 text-stone-400">
+                <Banknote size={32} className="opacity-20 mb-2" />
+                <p className="text-xs font-medium">No recent payments recorded.</p>
+              </div>
             ) : (
               recentPayments.map((payment, index) => (
                 <div
                   key={index}
-                  className="flex items-center justify-between p-3 hover:bg-slate-50 rounded-2xl transition group"
+                  className="flex items-center justify-between p-4 hover:bg-stone-50 rounded-2xl transition-all duration-200 group border border-transparent hover:border-stone-100"
                 >
                   <div className="flex items-center gap-4">
-                    <div className="h-10 w-10 rounded-full bg-linear-to-br from-rose-100 to-pink-200 flex items-center justify-center text-rose-700 font-bold text-sm">
+                    {/* Rose Icon Background */}
+                    <div className="h-12 w-12 rounded-2xl bg-rose-50 flex items-center justify-center text-rose-600 font-bold text-lg group-hover:bg-white group-hover:shadow-sm transition-all">
                       {payment.name.charAt(0)}
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-slate-800">
+                      <p className="text-sm font-bold text-[#2C1810] group-hover:text-rose-700 transition-colors">
                         {payment.name}
                       </p>
-                      <p className="text-xs text-slate-400">{payment.date}</p>
+                      <p className="text-xs font-semibold text-stone-400 mt-0.5">{payment.date}</p>
                     </div>
                   </div>
-                  <span
-                    className={`text-sm font-bold ${
-                      payment.status === "success"
-                        ? "text-emerald-500"
-                        : "text-amber-500"
-                    }`}
-                  >
-                    {payment.amount}
-                  </span>
+                  <div className="text-right">
+                    <span
+                      className={`block text-sm font-black ${
+                        payment.status === "success"
+                          ? "text-emerald-600"
+                          : "text-amber-500"
+                      }`}
+                    >
+                      {payment.amount}
+                    </span>
+                    <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">
+                       Received
+                    </span>
+                  </div>
                 </div>
               ))
             )}
           </div>
         </div>
 
-        {/* Today's Schedule (from batches) */}
-        <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-bold text-slate-800">
+        {/* Today's Schedule */}
+        <div className="bg-white rounded-3xl p-6 md:p-8 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.05)] border border-stone-100">
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-xl font-bold font-serif text-[#2C1810] flex items-center gap-2">
               Today's Schedule
             </h2>
-            <button className="text-sm text-rose-600 font-medium hover:underline">
-              See all
+            <button className="text-xs font-bold text-stone-500 bg-stone-100 px-3 py-1.5 rounded-lg hover:bg-stone-200 transition-colors uppercase tracking-wide">
+              See All
             </button>
           </div>
 
-          <div className="space-y-0">
+          <div className="space-y-4">
             {upcomingClasses.length === 0 ? (
-              <p className="text-xs text-slate-400">
-                No batches created yet. Create batches to see schedule here.
-              </p>
+              <div className="flex flex-col items-center justify-center py-8 text-stone-400">
+                <Briefcase size={32} className="opacity-20 mb-2" />
+                <p className="text-xs font-medium">No batches scheduled today.</p>
+              </div>
             ) : (
               upcomingClasses.map((cls, index) => (
                 <div
                   key={index}
-                  className="flex gap-4 p-4 border-l-2 border-slate-100 hover:border-rose-500 hover:bg-slate-50 transition-all duration-300"
+                  className="relative flex gap-5 p-5 rounded-2xl border border-stone-100 bg-stone-50/30 hover:bg-white hover:shadow-md hover:border-rose-100 transition-all duration-300 group overflow-hidden"
                 >
-                  <div className="min-w-[70px]">
-                    <p className="text-sm font-bold text-slate-800">
+                  {/* Left Accent Bar - Rose */}
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-stone-200 group-hover:bg-rose-500 transition-colors duration-300"></div>
+
+                  <div className="min-w-20 flex flex-col justify-center">
+                    <p className="text-sm font-black text-[#2C1810] group-hover:text-rose-600 transition-colors">
                       {cls.time}
                     </p>
-                    <p className="text-xs text-slate-400">
-                      {cls.students} students
+                    <p className="text-[10px] font-bold text-stone-400 uppercase tracking-wide mt-1">
+                      Time
                     </p>
                   </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-slate-800">
+                  
+                  <div className="flex-1">
+                    <h4 className="text-sm font-bold text-[#2C1810] mb-2">
                       {cls.title}
                     </h4>
-                    <div className="flex items-center gap-3 mt-1">
-                      <span className="text-xs text-slate-500 flex items-center gap-1">
-                        <Users size={12} /> {cls.students}
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-semibold text-stone-500 flex items-center gap-1.5 bg-white px-2 py-1 rounded-md border border-stone-100 shadow-sm">
+                        <Users size={12} className="text-stone-400" /> {cls.students}
                       </span>
-                      <span className="text-xs text-rose-500 bg-rose-50 px-2 py-0.5 rounded-md">
+                      <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-2.5 py-1 rounded-md border border-rose-100">
                         {cls.instructor}
                       </span>
                     </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-center text-stone-300 group-hover:text-rose-400 transition-colors">
+                      <CheckCircle2 size={18} />
                   </div>
                 </div>
               ))
@@ -390,14 +464,6 @@ const DashboardPage = () => {
           </div>
         </div>
       </div>
-
-      {/* Simple animation styles for the mock chart */}
-      <style>{`
-        @keyframes fillBar {
-          from { height: 0%; }
-          to { height: var(--target-height); }
-        }
-      `}</style>
     </div>
   );
 };

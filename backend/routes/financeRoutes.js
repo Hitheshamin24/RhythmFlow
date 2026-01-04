@@ -16,7 +16,10 @@ router.get("/summary", async (req, res) => {
     // students
     const students = await Student.find({ studio: studioId, isActive: true });
 
-    const totalExpected = students.reduce((sum, s) => sum + (s.monthlyFee || 0), 0);
+    const totalExpected = students.reduce(
+      (sum, s) => sum + (s.monthlyFee || 0),
+      0
+    );
     const totalCollected = students
       .filter((s) => s.isPaid)
       .reduce((sum, s) => sum + (s.monthlyFee || 0), 0);
@@ -24,7 +27,17 @@ router.get("/summary", async (req, res) => {
     const pending = totalExpected - totalCollected;
 
     // expenses
-    const expenses = await Expense.find({ studio: studioId });
+    const now = new Date();
+    const startOfMonth = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)
+    );
+
+    const expenses = await Expense.find({
+      studio: studioId,
+      createdAt: { $gte: startOfMonth },
+    })
+      .sort({ createdAt: -1 })
+      .limit(20);
 
     const totalExpenses = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
 
@@ -59,7 +72,6 @@ router.post("/expense", async (req, res) => {
   res.status(201).json(item);
 });
 
-
 // DELETE expense
 router.delete("/expense/:id", async (req, res) => {
   try {
@@ -93,34 +105,43 @@ router.get("/monthly", async (req, res) => {
     const now = new Date();
     const monthStarts = [];
     for (let i = months - 1; i >= 0; i--) {
-      const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
+      const d = new Date(
+        Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1)
+      );
       monthStarts.push(d);
     }
 
     // compute month ranges (start inclusive, end exclusive)
     const ranges = monthStarts.map((d) => {
       const start = d;
-      const end = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1));
+      const end = new Date(
+        Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1)
+      );
       return { start, end };
     });
+    const earliestMonthStart = ranges[0].start;
 
     // Aggregate expenses by month using createdAt
-const expensesAgg = await Expense.aggregate([
-  { $match: { studio: new mongoose.Types.ObjectId(studioId) } },
-  {
-    $addFields: {
-      year: { $year: "$createdAt" },
-      month: { $month: "$createdAt" },
-    },
-  },
-  {
-    $group: {
-      _id: { year: "$year", month: "$month" },
-      total: { $sum: "$amount" },
-    },
-  },
-]);
-
+    const expensesAgg = await Expense.aggregate([
+      {
+        $match: {
+          studio: new mongoose.Types.ObjectId(studioId),
+          createdAt: { $gte: earliestMonthStart },
+        },
+      },
+      {
+        $addFields: {
+          year: { $year: "$createdAt" },
+          month: { $month: "$createdAt" },
+        },
+      },
+      {
+        $group: {
+          _id: { year: "$year", month: "$month" },
+          total: { $sum: "$amount" },
+        },
+      },
+    ]);
 
     // Build a map for expense totals keyed by "YYYY-M"
     const expenseMap = {};
@@ -130,7 +151,10 @@ const expensesAgg = await Expense.aggregate([
     });
 
     // For income: sum monthlyFee for students whose lastPaidDate falls in that month
-    const students = await Student.find({ studio: studioId, isActive: true }).select("monthlyFee lastPaidDate");
+    const students = await Student.find({
+      studio: studioId,
+      isActive: true,
+    }).select("monthlyFee lastPaidDate");
 
     const incomeMap = {};
     students.forEach((s) => {
@@ -148,7 +172,12 @@ const expensesAgg = await Expense.aggregate([
       const income = incomeMap[key] || 0;
       const expenses = expenseMap[key] || 0;
       return {
-        label: r.start.toLocaleString("default", { month: "short", year: "numeric" }), // e.g. "Jul 2025"
+        label: r.start.toLocaleString("en-IN", {
+          month: "short",
+          year: "numeric",
+          timeZone: "UTC",
+        }),
+        // e.g. "Jul 2025"
         year: yr,
         month: m,
         income,

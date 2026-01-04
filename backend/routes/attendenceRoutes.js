@@ -48,6 +48,50 @@ router.post("/", async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+// GET /api/attendance/weekly
+// Returns present count for each day of current week (Mon–Sun)
+router.get("/weekly", async (req, res) => {
+  try {
+    const studioId = req.studioId;
+
+    // --- Calculate start & end of week (Monday → Sunday)
+    const now = new Date();
+    const day = now.getDay(); // 0=Sun, 1=Mon
+    const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+
+    const startOfWeek = new Date(now.setDate(diff));
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(endOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
+
+    // --- Fetch attendance records for this week
+    const records = await Attendance.find({
+      studio: studioId,
+      createdAt: { $gte: startOfWeek, $lte: endOfWeek },
+    }).select("date presentStudents");
+
+    // --- Prepare response structure
+    const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    const weeklyData = days.map((d) => ({ day: d, present: 0 }));
+
+    // --- Fill counts
+    records.forEach((record) => {
+      const dateObj = new Date(record.date);
+      const jsDay = dateObj.getDay(); // 0=Sun
+      const index = jsDay === 0 ? 6 : jsDay - 1;
+
+      weeklyData[index].present = (record.presentStudents || []).length;
+    });
+
+    res.json(weeklyData);
+  } catch (e) {
+    console.error("Weekly attendance error:", e);
+    res.status(500).json({ message: "Failed to load weekly attendance" });
+  }
+});
+
 // GET /api/attendance/summary
 // Returns { currentRate, lastRate } in %
 router.get("/summary", async (req, res) => {

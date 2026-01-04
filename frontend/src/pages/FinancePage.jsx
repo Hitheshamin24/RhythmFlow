@@ -17,21 +17,19 @@ import {
   AlertTriangle,
   Wallet,
   TrendingUp,
+  MoreHorizontal,
+  Calendar,
 } from "lucide-react";
 
 import {
   ResponsiveContainer,
-  LineChart,
-  Line,
+  BarChart,
+  Bar,
+  Legend,
   CartesianGrid,
   Tooltip,
   XAxis,
   YAxis,
-  BarChart,
-  Bar,
-  Legend,
-  AreaChart,
-  Area,
 } from "recharts";
 
 const FinancePage = () => {
@@ -53,6 +51,7 @@ const FinancePage = () => {
   const [selectedExpense, setSelectedExpense] = useState(null);
   const [toggleConfirm, setToggleConfirm] = useState(false);
 
+  const [selectedMonth, setSelectedMonth] = useState(null);
   const [error, setError] = useState("");
   const [monthsRange, setMonthsRange] = useState(6);
 
@@ -75,7 +74,13 @@ const FinancePage = () => {
     setGraphLoading(true);
     try {
       const m = await getMonthlyFinance(range);
-      setMonthly(m.data.months || []);
+      const months = m.data.months || [];
+      setMonthly(months);
+
+      // ✅ Default: last month = current month
+      if (months.length > 0) {
+        setSelectedMonth(months[months.length - 1]);
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -89,7 +94,6 @@ const FinancePage = () => {
     updateGraph(range);
   };
 
-  // ... (Keep handleAddExpense, openDeleteModal, handleConfirmDelete as they were) ...
   const handleAddExpense = async (e) => {
     e.preventDefault();
     try {
@@ -140,48 +144,41 @@ const FinancePage = () => {
     Expenses: m.expenses,
     Profit: m.profit,
   }));
-
-  useEffect(() => {
-    const init = async () => {
-      try {
-        const res = await getFinanceSummary();
-        console.log("🔍 Finance summary from API:", res.data); // <-- add this
-        setSummary(res.data);
-        await updateGraph(6);
-      } catch (err) {
-        setError("Failed to load finance data");
-      } finally {
-        setInitialLoading(false);
-      }
-    };
-    init();
-  }, []);
+  const monthIncome = selectedMonth?.income || 0;
+  const monthExpenses = selectedMonth?.expenses || 0;
+  const monthProfit = selectedMonth?.profit || 0;
 
   // --- NEW LOGIC FOR SMOOTH TOGGLE ---
   const monthOptions = [3, 6, 12];
   const activeIndex = monthOptions.indexOf(monthsRange);
 
+  const profitPercent =
+    monthIncome > 0 ? Math.round((monthProfit / monthIncome) * 100) : 0;
+
   return (
-    <div className="space-y-8 pb-10">
+    // Applied Warm Background
+    <div className="space-y-8 pb-10 bg-[#FFFBF7] min-h-screen p-6 md:p-8 font-sans text-stone-800">
       {/* --- Header --- */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800">
+          {/* Serif Font & Chocolate Color */}
+          <h2 className="text-4xl font-bold font-serif text-[#2C1810] tracking-tight">
             Financial Overview
           </h2>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-sm font-medium text-stone-500 mt-2 flex items-center gap-2">
+            <Calendar size={14} />
             Track your studio's health, income, and expenses.
           </p>
         </div>
 
         {/* --- SMOOTH SLIDING TOGGLE --- */}
-        <div className="relative flex bg-white p-1 rounded-2xl border border-slate-200 shadow-sm w-full md:w-auto min-w-[280px]">
+        <div className="relative flex bg-stone-200/50 p-1.5 rounded-xl w-full md:w-auto min-w-[300px]">
           {/* The Gliding Background Pill */}
           <div
-            className="absolute top-1 bottom-1 left-1 bg-rose-500 rounded-xl shadow-md transition-all duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1)]"
+            className="absolute top-1.5 bottom-1.5 left-1.5 bg-white rounded-[10px] shadow-sm border border-stone-200/50 transition-all duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1)]"
             style={{
-              width: "calc((100% - 0.5rem) / 3)", // Exact 1/3 width minus padding
-              transform: `translateX(${activeIndex * 100}%)`, // Slide by 100% of its own width
+              width: "calc((100% - 0.75rem) / 3)",
+              transform: `translateX(${activeIndex * 100}%)`,
             }}
           />
 
@@ -190,10 +187,10 @@ const FinancePage = () => {
             <button
               key={m}
               onClick={() => handleMonthChange(m)}
-              className={`relative z-10 flex-1 py-2 text-xs font-bold transition-colors duration-300 text-center ${
+              className={`relative z-10 flex-1 py-2 text-xs font-bold transition-colors duration-300 text-center uppercase tracking-wide ${
                 monthsRange === m
-                  ? "text-white"
-                  : "text-slate-500 hover:text-slate-700"
+                  ? "text-[#2C1810]" // Active text: Chocolate
+                  : "text-stone-400 hover:text-stone-600"
               }`}
             >
               {m} Months
@@ -203,305 +200,328 @@ const FinancePage = () => {
       </div>
 
       {error && (
-        <div className="bg-rose-50 border border-rose-200 text-rose-700 px-4 py-3 rounded-xl flex items-center gap-2 text-sm font-medium">
+        <div className="bg-rose-50 border border-rose-200 text-rose-700 px-4 py-3 rounded-xl flex items-center gap-2 text-sm font-medium animate-in fade-in slide-in-from-top-2">
           <AlertTriangle size={16} /> {error}
         </div>
       )}
 
-      {/* ... (Keep the rest of your JSX exactly as it was: Cards, Charts, Expense List, Modals) ... */}
-
       {initialLoading ? (
-        <div className="flex justify-center py-20">
-          <Loader2 size={40} className="animate-spin text-rose-500" />
+        <div className="flex justify-center py-32">
+          <Loader2 size={48} className="animate-spin text-rose-500" />
         </div>
       ) : (
         summary && (
           <>
             {/* Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {/* ... (Your existing Cards) ... */}
-              <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-between h-32 relative overflow-hidden group">
-                <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50 rounded-full -mr-6 -mt-6 group-hover:scale-110 transition-transform duration-500"></div>
+              
+              {/* Projected Income Card - AMBER (Matches Revenue) */}
+              <div className="bg-white p-6 rounded-[1.5rem] border border-stone-100 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.05)] hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between h-36 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-amber-50/50 rounded-full -mr-10 -mt-10 group-hover:scale-110 transition-transform duration-700 ease-out"></div>
                 <div className="relative z-10">
-                  <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                  <p className="text-xs font-bold uppercase tracking-wider text-stone-400">
                     Projected Income
                   </p>
-                  <p className="text-2xl font-bold text-slate-800 mt-2">
+                  <p className="text-3xl font-black text-[#2C1810] mt-2 tracking-tight">
                     ₹{summary.totalExpected.toLocaleString()}
                   </p>
                 </div>
-                <div className="relative z-10 flex items-center gap-2 text-xs font-medium text-blue-600">
-                  <div className="flex items-center justify-center w-4 h-4 rounded-full border-[1.5px] border-current">
-                    <IndianRupee size={10} strokeWidth={3} />
-                  </div>
+                <div className="relative z-10 flex items-center gap-2 text-xs font-bold text-amber-600 bg-amber-50 w-fit px-2 py-1 rounded-lg">
+                  <IndianRupee size={12} strokeWidth={3} />
                   Total Fees
                 </div>
               </div>
-              {/* ... (Repeat other cards as before) ... */}
-              <div className="bg-emerald-50/60 p-6 rounded-3xl border border-emerald-100 shadow-sm flex flex-col justify-between h-32">
-                <div>
+
+              {/* Collected Card - EMERALD (Matches Money In) */}
+              <div className="bg-white p-6 rounded-[1.5rem] border border-stone-100 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.05)] hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between h-36 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-50 rounded-full -mr-8 -mt-8 opacity-50"></div>
+                <div className="relative z-10">
                   <p className="text-xs font-bold uppercase tracking-wider text-emerald-600/70">
                     Collected
                   </p>
-                  <p className="text-2xl font-bold text-emerald-900 mt-2">
+                  <p className="text-3xl font-black text-[#2C1810] mt-2 tracking-tight">
                     ₹{summary.totalCollected.toLocaleString()}
                   </p>
                 </div>
-                <div className="flex items-center gap-2 text-xs font-bold text-emerald-700">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 w-fit px-2 py-1 rounded-lg">
                   <ArrowUpRight size={14} /> Received
                 </div>
               </div>
-              <div className="bg-rose-50/60 p-6 rounded-3xl border border-rose-100 shadow-sm flex flex-col justify-between h-32">
-                <div>
+
+              {/* Expenses Card - ROSE (Matches Brand/Expenses) */}
+              <div className="bg-white p-6 rounded-[1.5rem] border border-stone-100 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.05)] hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between h-36 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-24 h-24 bg-rose-50 rounded-full -mr-8 -mt-8 opacity-50"></div>
+                <div className="relative z-10">
                   <p className="text-xs font-bold uppercase tracking-wider text-rose-600/70">
                     Expenses
                   </p>
-                  <p className="text-2xl font-bold text-rose-900 mt-2">
+                  <p className="text-3xl font-black text-[#2C1810] mt-2 tracking-tight">
                     ₹{summary.totalExpenses.toLocaleString()}
                   </p>
                 </div>
-                <div className="flex items-center gap-2 text-xs font-bold text-rose-700">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-rose-700 bg-rose-50 w-fit px-2 py-1 rounded-lg">
                   <ArrowDownRight size={14} /> Outgoing
                 </div>
               </div>
-              <div className="bg-purple-50/60 p-6 rounded-3xl border border-purple-100 shadow-sm flex flex-col justify-between h-32">
+
+              {/* Net Profit Card - CHOCOLATE GRADIENT */}
+              <div className="bg-gradient-to-br from-[#5D4037] to-[#3E2723] p-6 rounded-[1.5rem] shadow-lg shadow-stone-300 flex flex-col justify-between h-36 text-white relative overflow-hidden">
+                <div className="absolute inset-0 bg-white/5 opacity-0 hover:opacity-10 transition-opacity duration-300"></div>
+                <div className="absolute -bottom-4 -right-4 text-white/10 transform rotate-12">
+                   <TrendingUp size={80} />
+                </div>
+                
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-wider text-purple-600/70">
+                  <p className="text-xs font-bold uppercase tracking-wider text-stone-300">
                     Net Profit
                   </p>
-                  <p className="text-2xl font-bold text-purple-900 mt-2">
-                    ₹{summary.profit.toLocaleString()}
+                  <p className="text-3xl font-black mt-2 tracking-tight">
+                    ₹{monthProfit.toLocaleString()}
                   </p>
                 </div>
-                <div className="flex items-center gap-2 text-xs font-bold text-purple-700">
-                  <TrendingUp size={14} /> Actual Growth
+                
+                <div className="flex items-center gap-2 relative z-10">
+                   <span
+                    className={`text-xs font-bold px-2 py-1 rounded-lg backdrop-blur-md bg-white/10 border border-white/10 ${
+                      profitPercent >= 0 ? "text-emerald-300" : "text-rose-300"
+                    }`}
+                  >
+                    {profitPercent >= 0 ? "+" : ""}
+                    {profitPercent}% margin
+                  </span>
                 </div>
               </div>
             </div>
 
             {/* Charts Section */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
               {/* Left Chart */}
-              <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-100 p-6 shadow-sm relative overflow-hidden">
-                <div className="flex justify-between items-center mb-6">
-                  <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
-                    <TrendingUp size={18} className="text-slate-400" />
+              <div className="lg:col-span-2 bg-white rounded-[1.5rem] border border-stone-100 p-6 md:p-8 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.05)] relative overflow-hidden">
+                <div className="flex justify-between items-center mb-8">
+                  <h3 className="text-lg font-bold font-serif text-[#2C1810] flex items-center gap-2">
+                    <div className="bg-stone-100 p-2 rounded-lg text-stone-500">
+                      <TrendingUp size={18} />
+                    </div>
                     Financial Trends
                   </h3>
                   {graphLoading && (
-                    <span className="text-xs font-medium text-rose-500 flex items-center gap-1 animate-pulse">
+                    <span className="text-xs font-bold text-rose-500 flex items-center gap-1.5 px-3 py-1 bg-rose-50 rounded-full animate-pulse">
                       <Loader2 size={12} className="animate-spin" /> Updating...
                     </span>
                   )}
                 </div>
                 <div
-                  className={`h-72 w-full min-w-0 transition-all duration-500 ease-in-out ${
+                  className={`h-80 w-full min-w-0 transition-all duration-500 ease-in-out ${
                     graphLoading
-                      ? "opacity-40 scale-[0.99] blur-[1px]"
+                      ? "opacity-50 scale-[0.99] blur-[1px]"
                       : "opacity-100 scale-100 blur-0"
                   }`}
                 >
-                  <ResponsiveContainer width="100%" height={200}>
-                    <BarChart data={chartDataMulti} barGap={4}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={chartDataMulti}
+                      margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                      barGap={6}
+                      onClick={(data) => {
+                        if (data && data.activeLabel) {
+                          const month = monthly.find(
+                            (m) => m.label === data.activeLabel
+                          );
+                          if (month) setSelectedMonth(month);
+                        }
+                      }}
+                    >
                       <CartesianGrid
-                        strokeDasharray="3 3"
+                        strokeDasharray="4 4"
                         vertical={false}
-                        stroke="#f1f5f9"
+                        stroke="#e7e5e4" // Stone-200
                       />
                       <XAxis
                         dataKey="name"
                         axisLine={false}
                         tickLine={false}
-                        tick={{ fontSize: 12, fill: "#64748b" }}
-                        dy={10}
+                        tick={{ fontSize: 11, fill: "#a8a29e", fontWeight: 600 }}
+                        dy={15}
                       />
                       <YAxis
                         axisLine={false}
                         tickLine={false}
-                        tick={{ fontSize: 12, fill: "#64748b" }}
+                        tick={{ fontSize: 11, fill: "#a8a29e", fontWeight: 600 }}
+                        dx={-10}
                       />
                       <Tooltip
+                        cursor={{ fill: "#f5f5f4", opacity: 0.6 }}
                         contentStyle={{
-                          borderRadius: "12px",
+                          borderRadius: "16px",
                           border: "none",
-                          boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+                          boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)",
+                          padding: "12px 16px",
+                          fontFamily: "inherit",
+                          backgroundColor: "#fff",
+                          color: "#2C1810"
                         }}
-                        cursor={{ fill: "#f8fafc" }}
-                        animationDuration={300}
+                        itemStyle={{ fontSize: "12px", fontWeight: "600", padding: "2px 0" }}
                       />
-                      <Legend wrapperStyle={{ paddingTop: "20px" }} />
+                      <Legend 
+                        wrapperStyle={{ paddingTop: "30px" }} 
+                        iconType="circle"
+                        formatter={(value) => <span className="text-stone-500 font-semibold text-xs ml-1">{value}</span>}
+                      />
+                      {/* Emerald for Income, Rose for Expense to match image logic */}
                       <Bar
                         dataKey="Income"
-                        fill="#10b981"
-                        radius={[4, 4, 0, 0]}
-                        maxBarSize={40}
-                        animationDuration={800}
+                        name="Income"
+                        fill="#10b981" 
+                        radius={[6, 6, 6, 6]}
+                        maxBarSize={32}
+                        animationDuration={1000}
                       />
+
                       <Bar
                         dataKey="Expenses"
-                        fill="#f43f5e"
-                        radius={[4, 4, 0, 0]}
-                        maxBarSize={40}
-                        animationDuration={800}
+                        name="Expenses"
+                        fill="#f43f5e" 
+                        radius={[6, 6, 6, 6]}
+                        maxBarSize={32}
+                        animationDuration={1000}
                       />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
               </div>
 
-              {/* Right Chart */}
-              <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm flex flex-col">
-                <h3 className="text-base font-bold text-slate-800 mb-2">
-                  This Month
-                </h3>
-                <p className="text-xs text-slate-500 mb-6">
-                  Income vs Expenses flow
-                </p>
-                <div className="w-full min-h-[200px] min-w-0">
-                  <ResponsiveContainer width="100%" height={200}>
-                    <AreaChart
-                      data={[
-                        { name: "Start", income: 0, expenses: 0 },
-                        {
-                          name: "Current",
-                          income: summary.totalCollected,
-                          expenses: summary.totalExpenses,
-                        },
-                      ]}
-                    >
-                      <defs>
-                        <linearGradient
-                          id="colorIncome"
-                          x1="0"
-                          y1="0"
-                          x2="0"
-                          y2="1"
-                        >
-                          <stop
-                            offset="5%"
-                            stopColor="#10b981"
-                            stopOpacity={0.1}
-                          />
-                          <stop
-                            offset="95%"
-                            stopColor="#10b981"
-                            stopOpacity={0}
-                          />
-                        </linearGradient>
-                        <linearGradient
-                          id="colorExpense"
-                          x1="0"
-                          y1="0"
-                          x2="0"
-                          y2="1"
-                        >
-                          <stop
-                            offset="5%"
-                            stopColor="#f43f5e"
-                            stopOpacity={0.1}
-                          />
-                          <stop
-                            offset="95%"
-                            stopColor="#f43f5e"
-                            stopOpacity={0}
-                          />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        vertical={false}
-                        stroke="#f1f5f9"
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          borderRadius: "12px",
-                          border: "none",
-                          boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
-                        }}
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="income"
-                        stroke="#10b981"
-                        fillOpacity={1}
-                        fill="url(#colorIncome)"
-                        strokeWidth={3}
-                        animationDuration={1000}
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="expenses"
-                        stroke="#f43f5e"
-                        fillOpacity={1}
-                        fill="url(#colorExpense)"
-                        strokeWidth={3}
-                        animationDuration={1000}
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
+              {/* Right Chart (Monthly Details) */}
+              <div className="bg-white rounded-[1.5rem] border border-stone-100 p-6 md:p-8 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.05)] flex flex-col h-full">
+                <div className="mb-6">
+                  <h3 className="text-xl font-bold font-serif text-[#2C1810]">
+                    {selectedMonth?.label || "This Month"}
+                  </h3>
+                  <p className="text-xs font-medium text-stone-400 mt-1">
+                    Monthly performance breakdown
+                  </p>
+                </div>
+
+                <div className="flex flex-col gap-4 flex-1 justify-center">
+                  {/* Income */}
+                  <div className="group flex justify-between items-center p-4 rounded-2xl border border-stone-100 bg-stone-50/50 hover:bg-emerald-50/30 hover:border-emerald-100 transition-colors">
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-stone-400 group-hover:text-emerald-500 transition-colors">
+                        Income
+                      </p>
+                      <p className="text-xl font-bold text-stone-800 mt-1 group-hover:text-emerald-900">
+                        ₹{monthIncome.toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="h-10 w-10 rounded-full bg-white flex items-center justify-center text-stone-300 group-hover:text-emerald-500 group-hover:shadow-sm transition-all">
+                       <ArrowUpRight size={20} />
+                    </div>
+                  </div>
+
+                  {/* Expenses */}
+                  <div className="group flex justify-between items-center p-4 rounded-2xl border border-stone-100 bg-stone-50/50 hover:bg-rose-50/30 hover:border-rose-100 transition-colors">
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-stone-400 group-hover:text-rose-500 transition-colors">
+                        Expenses
+                      </p>
+                      <p className="text-xl font-bold text-stone-800 mt-1 group-hover:text-rose-900">
+                        ₹{monthExpenses.toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="h-10 w-10 rounded-full bg-white flex items-center justify-center text-stone-300 group-hover:text-rose-500 group-hover:shadow-sm transition-all">
+                       <ArrowDownRight size={20} />
+                    </div>
+                  </div>
+
+                  {/* Profit */}
+                  <div className="relative overflow-hidden group flex justify-between items-center p-5 rounded-2xl border border-stone-200 bg-[#2C1810]/5">
+                    <div className="relative z-10">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-[#2C1810]">
+                        Net Profit
+                      </p>
+                      <p className="text-2xl font-black text-[#2C1810] mt-1">
+                        ₹{monthProfit.toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="text-right relative z-10">
+                      <p
+                        className={`text-sm font-bold ${
+                          profitPercent >= 0 ? "text-emerald-600" : "text-rose-600"
+                        }`}
+                      >
+                        {profitPercent >= 0 ? "+" : ""}
+                        {profitPercent}%
+                      </p>
+                      <p className="text-[10px] font-bold text-stone-400 uppercase">Margin</p>
+                    </div>
+                    {/* Decorative Background */}
+                    <TrendingUp className="absolute -bottom-2 -right-2 text-[#2C1810] opacity-10 transform rotate-12" size={80} />
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Expense List */}
-            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
-              <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/30">
+            <div className="bg-white rounded-[1.5rem] border border-stone-100 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.05)] overflow-hidden">
+              <div className="p-6 md:p-8 border-b border-stone-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                  <h3 className="text-base font-bold text-slate-800">
+                  <h3 className="text-lg font-bold font-serif text-[#2C1810]">
                     Recent Expenses
                   </h3>
-                  <p className="text-xs text-slate-500 mt-1">
+                  <p className="text-xs text-stone-500 mt-1 font-medium">
                     Detailed list of outgoing payments.
                   </p>
                 </div>
                 <button
                   onClick={() => setShowAddModal(true)}
-                  className="px-4 py-2.5 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition shadow-lg shadow-slate-900/20 flex items-center gap-2"
+                  className="px-5 py-3 rounded-xl bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 transition-all duration-300 shadow-lg shadow-rose-200 hover:shadow-rose-300 flex items-center gap-2 transform active:scale-95"
                 >
                   <Plus size={16} /> Add Expense
                 </button>
               </div>
+              
               {summary.expenses.length === 0 ? (
-                <div className="py-12 flex flex-col items-center justify-center text-slate-400">
-                  <Wallet size={32} className="mb-2 opacity-20" />
-                  <p className="text-sm">
+                <div className="py-20 flex flex-col items-center justify-center text-stone-300">
+                  <div className="bg-stone-50 p-4 rounded-full mb-4">
+                    <Wallet size={32} className="opacity-40" />
+                  </div>
+                  <p className="text-sm font-medium text-stone-400">
                     No expenses recorded for this period.
                   </p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="min-w-full text-sm">
-                    <thead className="bg-slate-50/50">
-                      <tr className="text-left text-xs font-bold text-slate-400 uppercase tracking-wider">
-                        <th className="px-6 py-4">Title</th>
-                        <th className="px-6 py-4">Category</th>
-                        <th className="px-6 py-4">Amount</th>
-                        <th className="px-6 py-4 text-right">Action</th>
+                    <thead>
+                      <tr className="bg-stone-50/50 border-b border-stone-100">
+                        <th className="px-8 py-4 text-left text-[11px] font-bold text-stone-400 uppercase tracking-wider">Title</th>
+                        <th className="px-8 py-4 text-left text-[11px] font-bold text-stone-400 uppercase tracking-wider">Category</th>
+                        <th className="px-8 py-4 text-left text-[11px] font-bold text-stone-400 uppercase tracking-wider">Amount</th>
+                        <th className="px-8 py-4 text-right text-[11px] font-bold text-stone-400 uppercase tracking-wider">Action</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-50">
+                    <tbody className="divide-y divide-stone-50">
                       {summary.expenses.map((e) => (
                         <tr
                           key={e._id}
-                          className="group hover:bg-slate-50/80 transition-colors"
+                          className="group hover:bg-stone-50/80 transition-colors duration-200"
                         >
-                          <td className="px-6 py-4 font-semibold text-slate-700">
+                          <td className="px-8 py-5 font-semibold text-[#2C1810]">
                             {e.title}
                           </td>
-                          <td className="px-6 py-4">
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                          <td className="px-8 py-5">
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold bg-stone-100 text-stone-600 border border-stone-200">
                               {e.category}
                             </span>
                           </td>
-                          <td className="px-6 py-4 font-bold text-slate-900">
+                          <td className="px-8 py-5 font-bold text-stone-800">
                             ₹{e.amount.toLocaleString()}
                           </td>
-                          <td className="px-6 py-4 text-right">
+                          <td className="px-8 py-5 text-right">
                             <button
                               onClick={() => openDeleteModal(e)}
-                              className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                              className="p-2 text-stone-300 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all duration-200"
                             >
-                              <Trash2 size={18} />
+                              <Trash2 size={16} />
                             </button>
                           </td>
                         </tr>
@@ -515,24 +535,24 @@ const FinancePage = () => {
         )
       )}
 
-      {/* --- ADD & DELETE MODALS (Same as before) --- */}
+      {/* --- ADD & DELETE MODALS --- */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 px-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl border border-white/20 scale-100 animate-in zoom-in-95 duration-200">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-bold text-slate-900">
-                Add New Expense
+        <div className="fixed inset-0 bg-[#2C1810]/40 backdrop-blur-md flex items-center justify-center z-50 px-4 animate-in fade-in duration-300">
+          <div className="bg-white rounded-[2rem] w-full max-w-sm p-8 shadow-2xl border border-white/20 scale-100 animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center mb-8">
+              <h3 className="text-xl font-bold font-serif text-[#2C1810] tracking-tight">
+                New Expense
               </h3>
               <button
                 onClick={() => setShowAddModal(false)}
-                className="text-slate-400 hover:text-slate-600"
+                className="text-stone-400 hover:text-stone-600 hover:bg-stone-100 p-2 rounded-full transition-colors"
               >
                 <Plus size={24} className="rotate-45" />
               </button>
             </div>
-            <form onSubmit={handleAddExpense} className="space-y-4">
+            <form onSubmit={handleAddExpense} className="space-y-5">
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5 ml-1">
+                <label className="block text-[11px] font-bold text-stone-400 uppercase tracking-wider mb-2 ml-1">
                   Title
                 </label>
                 <input
@@ -543,15 +563,15 @@ const FinancePage = () => {
                   onChange={(e) =>
                     setForm((p) => ({ ...p, title: e.target.value }))
                   }
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition"
+                  className="w-full bg-stone-50 border border-stone-200 rounded-2xl px-5 py-3.5 text-sm font-semibold outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all placeholder:text-stone-300"
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5 ml-1">
+                <label className="block text-[11px] font-bold text-stone-400 uppercase tracking-wider mb-2 ml-1">
                   Amount
                 </label>
                 <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">
+                  <span className="absolute left-5 top-1/2 -translate-y-1/2 text-stone-400 font-bold">
                     ₹
                   </span>
                   <input
@@ -561,12 +581,12 @@ const FinancePage = () => {
                     onChange={(e) =>
                       setForm((p) => ({ ...p, amount: e.target.value }))
                     }
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-4 py-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition"
+                    className="w-full bg-stone-50 border border-stone-200 rounded-2xl pl-9 pr-5 py-3.5 text-sm font-semibold outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all placeholder:text-stone-300"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5 ml-1">
+                <label className="block text-[11px] font-bold text-stone-400 uppercase tracking-wider mb-2 ml-1">
                   Category
                 </label>
                 <input
@@ -576,21 +596,21 @@ const FinancePage = () => {
                   onChange={(e) =>
                     setForm((p) => ({ ...p, category: e.target.value }))
                   }
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition"
+                  className="w-full bg-stone-50 border border-stone-200 rounded-2xl px-5 py-3.5 text-sm font-semibold outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all placeholder:text-stone-300"
                 />
               </div>
               <div className="flex gap-3 pt-4">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="flex-1 px-4 py-3 rounded-xl bg-slate-100 text-slate-600 font-bold text-sm hover:bg-slate-200 transition"
+                  className="flex-1 px-4 py-3.5 rounded-2xl bg-stone-100 text-stone-600 font-bold text-sm hover:bg-stone-200 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={adding}
-                  className="flex-1 px-4 py-3 rounded-xl bg-slate-900 text-white font-bold text-sm hover:bg-slate-800 transition flex items-center justify-center gap-2 shadow-lg shadow-slate-900/20"
+                  className="flex-1 px-4 py-3.5 rounded-2xl bg-rose-600 text-white font-bold text-sm hover:bg-rose-700 transition-all shadow-lg shadow-rose-200 flex items-center justify-center gap-2"
                 >
                   {adding ? (
                     <Loader2 size={18} className="animate-spin" />
@@ -605,66 +625,70 @@ const FinancePage = () => {
       )}
 
       {showDeleteModal && selectedExpense && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 px-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl border border-white/20 scale-100 animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 bg-[#2C1810]/40 backdrop-blur-md flex items-center justify-center z-50 px-4 animate-in fade-in duration-300">
+          <div className="bg-white rounded-[2rem] w-full max-w-sm p-8 shadow-2xl border border-white/20 scale-100 animate-in zoom-in-95 duration-200">
             <div className="flex flex-col items-center text-center">
-              <div className="h-12 w-12 rounded-full bg-rose-100 flex items-center justify-center text-rose-600 mb-4">
-                <Trash2 size={24} />
+              <div className="h-16 w-16 rounded-full bg-rose-50 flex items-center justify-center text-rose-500 mb-6 shadow-sm">
+                <Trash2 size={28} strokeWidth={1.5} />
               </div>
-              <h2 className="text-lg font-bold text-slate-900">
+              <h2 className="text-xl font-bold text-[#2C1810]">
                 Delete Expense?
               </h2>
-              <p className="text-sm text-slate-500 mt-2 mb-6">
-                Delete{" "}
-                <span className="font-bold text-slate-800">
+              <p className="text-sm text-stone-500 mt-2 mb-8 leading-relaxed">
+                You are about to remove{" "}
+                <span className="font-bold text-stone-800">
                   "{selectedExpense.title}"
-                </span>
-                ?<br />
-                This cannot be undone.
+                </span>.
+                <br />
+                This action cannot be undone.
               </p>
             </div>
             <div
-              className="bg-slate-50 p-4 rounded-2xl flex items-center justify-between border border-slate-100 cursor-pointer select-none transition-colors hover:bg-slate-100"
+              className={`p-4 rounded-2xl flex items-center justify-between border cursor-pointer select-none transition-all duration-300 ${
+                 toggleConfirm 
+                 ? "bg-rose-50 border-rose-100 ring-1 ring-rose-200" 
+                 : "bg-stone-50 border-stone-100 hover:bg-stone-100"
+              }`}
               onClick={() => setToggleConfirm(!toggleConfirm)}
             >
-              <span className="text-xs font-bold text-slate-600 uppercase tracking-wide">
-                Confirm Delete
+              <span className={`text-xs font-bold uppercase tracking-wide ${toggleConfirm ? 'text-rose-600' : 'text-stone-500'}`}>
+                I understand
               </span>
               <div
-                className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors duration-300 ${
-                  toggleConfirm ? "bg-rose-500" : "bg-slate-300"
+                className={`w-12 h-7 flex items-center rounded-full p-1 transition-colors duration-300 ${
+                  toggleConfirm ? "bg-rose-500" : "bg-stone-300"
                 }`}
               >
                 <div
-                  className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ${
+                  className={`bg-white w-5 h-5 rounded-full shadow-md transform transition-transform duration-300 ${
                     toggleConfirm ? "translate-x-5" : "translate-x-0"
                   }`}
                 />
               </div>
             </div>
-            <div className="flex justify-end gap-3 mt-6">
+            <div className="flex justify-end gap-3 mt-8">
               <button
                 onClick={() => {
                   setShowDeleteModal(false);
                   setToggleConfirm(false);
                 }}
-                className="flex-1 px-4 py-2.5 rounded-xl bg-slate-100 text-slate-700 text-sm font-semibold hover:bg-slate-200 transition"
+                className="flex-1 px-4 py-3.5 rounded-2xl bg-white border border-stone-200 text-stone-700 text-sm font-bold hover:bg-stone-50 transition-colors"
               >
                 Cancel
               </button>
               <button
                 disabled={!toggleConfirm || deleting}
                 onClick={handleConfirmDelete}
-                className={`flex-1 px-4 py-2.5 rounded-xl text-white text-sm font-semibold shadow-lg transition flex items-center justify-center gap-2 ${
+                className={`flex-1 px-4 py-3.5 rounded-2xl text-white text-sm font-bold shadow-lg transition-all flex items-center justify-center gap-2 ${
                   !toggleConfirm
-                    ? "bg-slate-300 cursor-not-allowed shadow-none"
-                    : "bg-rose-600 hover:bg-rose-700 shadow-rose-500/30"
+                    ? "bg-stone-300 cursor-not-allowed shadow-none"
+                    : "bg-rose-600 hover:bg-rose-700 shadow-rose-500/30 hover:scale-[1.02]"
                 }`}
               >
                 {deleting ? (
                   <Loader2 size={16} className="animate-spin" />
                 ) : (
-                  "Delete"
+                  "Confirm Delete"
                 )}
               </button>
             </div>
